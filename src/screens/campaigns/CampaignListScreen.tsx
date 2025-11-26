@@ -1,22 +1,22 @@
-import { supabase } from '@/src/api/supabaseClient';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Button,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    View
+  ActivityIndicator,
+  Alert,
+  Button,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
 } from 'react-native';
 import {
-    createCampaign,
-    fetchMyCampaigns,
-    joinCampaignByCode,
-    MyCampaign,
+  createCampaign,
+  fetchMyCampaigns,
+  joinCampaignByCode,
+  MyCampaign,
 } from '../../api/campaigns';
+import { supabase } from '../../api/supabaseClient';
 
 const CampaignListScreen: React.FC = () => {
     const [campaigns, setCampaigns] = useState<MyCampaign[]>([]);

@@ -1,8 +1,8 @@
-import type { AuthStackParamList } from '@/src/navigation/AuthNavigator';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import { Alert, Button, Text, TextInput, View } from 'react-native';
 import { signUp } from '../../api/auth';
+import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -28,10 +28,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
             Alert.alert('Sign up failed', error.message);
         } else {
             Alert.alert('Success', 'Account created! You can log in now.', [
-                {
-                    text: 'OK',
-                    onPress: () => navigation.navigate('Login'),
-                },
+                { text: 'OK' },
             ]);
         }
     };

@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -8,6 +10,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View
 } from 'react-native';
 import {
@@ -17,8 +20,11 @@ import {
   MyCampaign,
 } from '../../api/campaigns';
 import { supabase } from '../../api/supabaseClient';
+import type { AppStackParamList } from '../../navigation/AppNavigator';
 
 const CampaignListScreen: React.FC = () => {
+    const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+
     const [campaigns, setCampaigns] = useState<MyCampaign[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -105,7 +111,16 @@ const CampaignListScreen: React.FC = () => {
                 ? 'Co-DM'
                 : 'Player';
         
+        const handlePress = () => {
+          navigation.navigate('CampaignDetail', {
+            campaignId: item.campaign_id,
+            name: item.name,
+            memberRole: item.member_role,
+          });
+        };
+
         return (
+          <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
             <View style={styles.card}>
                 <View style={styles.cardHeader}>
                     <Text style={styles.cardTitle}>{item.name}</Text>
@@ -121,6 +136,7 @@ const CampaignListScreen: React.FC = () => {
                     <Text style={styles.cardDescriptionEmpty}>No description yet.</Text>
                 )}
             </View>
+          </TouchableOpacity>
         );
     };
 
@@ -162,7 +178,7 @@ const CampaignListScreen: React.FC = () => {
             style={styles.input}
             value={newName}
             onChangeText={setNewName}
-            placeholder="Curse of Strahd – Group A"
+            placeholder="Curse of Strahd"
           />
           <Text style={styles.label}>Description (optional)</Text>
           <TextInput

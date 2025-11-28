@@ -10,6 +10,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
 import { createSession, fetchSessions, Session } from '../../api/sessions';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
@@ -17,9 +18,10 @@ import { formatDateTime } from '../../utils/formatDate';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'CampaignDetail'>;
 
-const CampaignDetailScreen: React.FC<Props> = ({ route }) => {
-    const { campaignId, name, memberRole } = route.params;
+const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
+    const { campaignId, name, memberRole, description } = route.params;
 
+    // Sessions state
     const [sessions, setSessions] = useState<Session[]>([]);
     const [sessionsLoading, setSessionsLoading] = useState(true);
 
@@ -29,9 +31,16 @@ const CampaignDetailScreen: React.FC<Props> = ({ route }) => {
     const [sessionLocation, setSessionLocation] = useState('');
     const [sessionActionLoading, setSessionActionLoading] = useState(false);
 
-    const [invites, setInvites] = useState<CampaignInvite[]>([])
+    // Invites state
+    const [invites, setInvites] = useState<CampaignInvite[]>([]);
     const [invitesLoading, setInvitesLoading] = useState(true);
     const [inviteActionLoading, setInviteActionLoading] = useState(false);
+
+    // Settings state
+    const [editingName, setEditingName] = useState(name);
+    const [editingDescription, setEditingDescription] = useState(description ?? '');
+    const [settingsLoading, setSettingsLoading] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const isDm = memberRole === 'dm' || memberRole === 'co_dm';
 
@@ -184,7 +193,61 @@ const CampaignDetailScreen: React.FC<Props> = ({ route }) => {
             return 'Expired';
         }
         return 'Active';
-    }
+    };
+
+    const handleSaveSettings = async () => {
+        if (!editingName.trim()) {
+            Alert.alert('Missing name', 'Campaign name cannot be empty.');
+            return;
+        }
+
+        setSettingsLoading(true);
+        try {
+            const updated = await updateCampaign(campaignId, {
+                name: editingName.trim(),
+                description: editingDescription.trim() || null,
+            });
+
+            navigation.setOptions({ title: updated.name });
+            Alert.alert('Saved', 'Campaign settings updated.');
+        } catch (err: any) {
+            Alert.alert(
+                'Error:',
+                err?.message ?? 'Failed to update campaign settings.'
+            );
+        } finally {
+            setSettingsLoading(false);
+        }
+    };
+
+    const handleDeleteCampaign = () => {
+        Alert.alert(
+            'Delete campaign',
+            'Are you sure you want to delte this campaign? This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setDeleteLoading(true);
+                        try {
+                            await deleteCampaign(campaignId);
+                            Alert.alert('Deleted', 'Campaign has been deleted.');
+                            navigation.goBack;
+                        } catch (err: any) {
+                            Alert.alert(
+                                'Error',
+                                err?.message ?? 'Failed to delete campaign.'
+                            );
+                        } finally {
+                            setDeleteLoading(false);
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     return (
         <ScrollView style={styles.container}>
@@ -283,53 +346,95 @@ const CampaignDetailScreen: React.FC<Props> = ({ route }) => {
                 </Text>
             </View>
 
-            {/* DM Tools */}
+            {/* DM Tools: Settings and Invites */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>DM Tools</Text>
+                <Text style={styles.settingsTitle}>DM Tools</Text>
                 
                 {isDm ? (
                     <>
-                        <Text style={styles.sectionBody}>
-                            Generate invite codes and share them with your players so they
-                            can join this campaign.
-                        </Text>
+                        {/* Campaign Settings */}
+                        <View style={styles.settingsContainer}>
+                            <Text style={styles.settingsTitle}>Campaign Settings</Text>
 
-                        <View style={{ marginVertical: 8 }}>
-                            <Button
-                                title={inviteActionLoading ? 'Creating code...' : 'Generate Invite Code'}
-                                onPress={handleCreateInvite}
-                                disabled={inviteActionLoading}
+                            <Text style={styles.formLabel}>Name</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={editingName}
+                                onChangeText={setEditingName}
+                                placeholder="Campaign Name"
                             />
+
+                            <Text style={styles.formLabel}>Description</Text>
+                            <TextInput
+                                style={[styles.input, styles.multilineInput]}
+                                value={editingDescription}
+                                onChangeText={setEditingDescription}
+                                placeholder="Short description of this campaign."
+                                multiline
+                            />
+
+                            <Button
+                                title={settingsLoading ? 'Saving...' : 'Save Changes'}
+                                onPress={handleSaveSettings}
+                                disabled={settingsLoading}
+                            />
+
+                            <View style={styles.dangerZone}>
+                                <Text style={styles.dangerTitle}>Danger zone</Text>
+                                <Button
+                                    title={deleteLoading ? 'Deleting...' : 'Delete Campaign'}
+                                    onPress={handleDeleteCampaign}
+                                    color="#b00020"
+                                    disabled={deleteLoading}
+                                />
+                            </View>
                         </View>
 
-                        {invitesLoading ? (
-                            <View style={styles.loaderRow}>
-                                <ActivityIndicator />
-                            </View>
-                        ) : invites.length === 0 ? (
+                        {/* Invite Codes */}
+                        <View style={styles.inviteSection}>
+                            <Text style={styles.settingsTitle}>Invite Codes</Text>
                             <Text style={styles.sectionBody}>
-                                No invite codes yet. Generate one above.
+                                Generate invite codes and share them with your players so they
+                                can join this campaign.
                             </Text>
-                        ) : (
-                            <View style={styles.inviteList}>
-                                {invites.map((inv) => (
-                                    <View key={inv.id} style={styles.inviteCard}>
-                                        <Text style={styles.inviteCode}>{inv.code}</Text>
-                                        <Text style={styles.inviteMeta}>
-                                            Created: {formatDateTime(inv.created_at)}
-                                        </Text>
-                                        {inv.expires_at && (
-                                            <Text style={styles.inviteMeta}>
-                                                Expires: {formatDateTime(inv.expires_at)}
-                                            </Text>
-                                        )}
-                                        <Text style={styles.inviteStatus}>
-                                            Status: {renderInviteStatus(inv)}
-                                        </Text>
-                                    </View>
-                                ))}
+
+                            <View style={{ marginVertical: 8 }}>
+                                <Button
+                                    title={inviteActionLoading ? 'Creating code...' : 'Generate Invite Code'}
+                                    onPress={handleCreateInvite}
+                                    disabled={inviteActionLoading}
+                                />
                             </View>
-                        )}
+
+                            {invitesLoading ? (
+                                <View style={styles.loaderRow}>
+                                    <ActivityIndicator />
+                                </View>
+                            ) : invites.length === 0 ? (
+                                <Text style={styles.sectionBody}>
+                                    No invite codes yet. Generate one above.
+                                </Text>
+                            ) : (
+                                <View style={styles.inviteList}>
+                                    {invites.map((inv) => (
+                                        <View key={inv.id} style={styles.inviteCard}>
+                                            <Text style={styles.inviteCode}>{inv.code}</Text>
+                                            <Text style={styles.inviteMeta}>
+                                                Created: {formatDateTime(inv.created_at)}
+                                            </Text>
+                                            {inv.expires_at && (
+                                                <Text style={styles.inviteMeta}>
+                                                    Expires: {formatDateTime(inv.expires_at)}
+                                                </Text>
+                                            )}
+                                            <Text style={styles.inviteStatus}>
+                                                Status: {renderInviteStatus(inv)}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
                     </>
                 ) : (
                     <Text style={styles.sectionBody}>
@@ -402,6 +507,10 @@ const styles = StyleSheet.create ({
         paddingVertical: 6,
         marginBottom: 8,
     },
+    multilineInput: {
+        minHeight: 60,
+        textAlignVertical: 'top',
+    },
     loaderRow: {
         marginTop: 8,
         gap: 8,
@@ -435,6 +544,26 @@ const styles = StyleSheet.create ({
     sessionMeta: {
         fontSize: 13,
         color: '#555',
+    },
+    settingsContainer: {
+        marginBottom: 16,
+    },
+    settingsTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    dangerZone: {
+        marginTop: 12,
+    },
+    dangerTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#b00020',
+        marginBottom: 4,
+    },
+    inviteSection: {
+        marginTop: 8,
     },
     inviteList: {
         marginTop: 8,

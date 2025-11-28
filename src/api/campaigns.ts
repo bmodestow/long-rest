@@ -45,3 +45,34 @@ export async function joinCampaignByCode(code: string) {
 
     return data; // campaign_members row
 }
+
+export async function updateCampaign(
+    campaignId: string,
+    patch: { name?: string; description?: string | null }
+) {
+    const { data, error } = await supabase
+        .from('campaigns')
+        .update(patch)
+        .eq('id', campaignId)
+        .select('*')
+        .single();
+
+    if (error) {
+        console.error('Error updating campaign:', error);
+        throw error;
+    }
+
+    return data;
+}
+
+export async function deleteCampaign(campaignId: string) {
+    const { error } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', campaignId);
+
+    if (error) {
+        console.error('Error deleting campaign:', error);
+        throw error;
+    }
+}

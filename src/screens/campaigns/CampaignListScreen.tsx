@@ -115,6 +115,7 @@ const CampaignListScreen: React.FC = () => {
           navigation.navigate('CampaignDetail', {
             campaignId: item.campaign_id,
             name: item.name,
+            description: item.description,
             memberRole: item.member_role,
           });
         };

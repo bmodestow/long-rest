@@ -8,6 +8,7 @@ export type AppStackParamList = {
     CampaignDetail: {
         campaignId: string;
         name: string;
+        description: string | null;
         memberRole: 'dm' | 'co_dm' | 'player';
     };
 };

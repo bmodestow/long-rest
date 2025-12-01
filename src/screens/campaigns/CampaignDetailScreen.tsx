@@ -1,7 +1,6 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
-import { TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp, NativeStackScreenProps } from '@react-navigation/native-stack';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -10,7 +9,8 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    View,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
@@ -326,18 +326,33 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                 ) : (
                     <View style={styles.sessionList}>
                         {sessions.map((s) => (
-                            <View key={s.id} style={styles.sessionCard}>
-                                <View style={styles.sessionHeader}>
-                                    <Text style={styles.sessionTitle}>{s.title}</Text>
-                                    <Text style={styles.sessionStatus}>{s.status}</Text>
+                            <TouchableOpacity
+                                key={s.id}
+                                onPress={() =>
+                                    navigation.navigate('SessionDetail', {
+                                        sessionId: s.id,
+                                        campaignId,
+                                        title: s.title,
+                                        scheduledStart: s.scheduled_start,
+                                        location: s.location,
+                                        memberRole,
+                                    })
+                                }
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.sessionCard}>
+                                    <View style={styles.sessionHeader}>
+                                        <Text style={styles.sessionTitle}>{s.title}</Text>
+                                        <Text style={styles.sessionStatus}>{s.status}</Text>
+                                    </View>
+                                    <Text style={styles.sessionMeta}>
+                                        {formatDateTime(s.scheduled_start)}
+                                    </Text>
+                                    {s.location ? (
+                                        <Text style={styles.sessionMeta}>{s.location}</Text>
+                                    ) : null}
                                 </View>
-                                <Text style={styles.sessionMeta}>
-                                    {formatDateTime(s.scheduled_start)}
-                                </Text>
-                                {s.location ? (
-                                    <Text style={styles.sessionMeta}>{s.location}</Text>
-                                ) : null}
-                            </View>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 )}

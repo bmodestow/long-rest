@@ -1,5 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
+import { TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import {
     ActivityIndicator,
     Alert,
@@ -20,6 +22,9 @@ type Props = NativeStackScreenProps<AppStackParamList, 'CampaignDetail'>;
 
 const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     const { campaignId, name, memberRole, description } = route.params;
+
+    const navigation =
+        useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
     // Sessions state
     const [sessions, setSessions] = useState<Session[]>([]);

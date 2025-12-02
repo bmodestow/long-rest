@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
@@ -16,6 +17,7 @@ import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
 import { createSession, fetchSessions, Session } from '../../api/sessions';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
+import { colors, radii, spacing } from '../../theme';
 import { formatDateTime } from '../../utils/formatDate';
 import CampaignPacketsScreen from './CampaignPacketsScreen';
 import DmSendPacketForm from './DmSendPacketForm';
@@ -57,6 +59,16 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const isDm = memberRole === 'dm' || memberRole === 'co_dm';
+
+  useEffect(() => {
+    navigation.setOptions({
+        title: editingName || name,
+        headerStyle: { backgroundColor: colors.bgElevated },
+        headerTintColor: colors.text,
+        headerTitleStyle: { color: colors.text },
+        headerShadowVisible: false // hides the grey bottom border on iOS
+    });
+  }, [navigation, editingName, name]);
 
   const loadSessions = async () => {
     try {
@@ -210,7 +222,6 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         description: editingDescription.trim() || null,
       });
 
-      navigation.setOptions({ title: updated.name });
       Alert.alert('Saved', 'Campaign settings updated.');
     } catch (err: any) {
       Alert.alert(
@@ -252,7 +263,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{editingName || name}</Text>
@@ -260,17 +271,37 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       </View>
 
       <Tab.Navigator
-        screenOptions={{
-          tabBarScrollEnabled: true,
-          tabBarIndicatorStyle: { backgroundColor: '#000' },
-          tabBarStyle: { backgroundColor: '#fff' },
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: '600',
-            textTransform: 'none',
-          },
-        }}
-      >
+        screenOptions={({ route }) => ({
+            tabBarScrollEnabled: true,
+            tabBarIndicatorStyle: { backgroundColor: colors.accent },
+            tabBarStyle: { backgroundColor: colors.bgElevated },
+            tabBarLabelStyle: {
+                fontSize: 12,
+                fontWeight: '600',
+                textTransform: 'none',
+            },
+            tabBarActiveTintColor: colors.accent,
+            tabBarInactiveTintColor: colors.textMuted,
+            tabBarIcon: ({ color }) => {
+                switch (route.name) {
+                    case 'Overview':
+                        return <Feather name="book-open" size={16} color={color} />;
+                    case 'Sessions':
+                        return <Feather name="calendar" size={16} color={color} />;
+                    case 'Packets':
+                        return <Feather name="mail" size={16} color={color} />;
+                    case 'Recaps':
+                        return <Feather name="file-text" size={16} color={color} />;
+                    case 'DmTools':
+                        return <Feather name="settings" size={16} color={color} />;
+                    default:
+                        return null;
+                }
+            },
+            tabBarShowIcon: true,
+        })}
+        >
+
         <Tab.Screen name="Overview">
           {() => (
             <OverviewTab
@@ -482,16 +513,34 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
                 activeOpacity={0.7}
               >
                 <View style={styles.sessionCard}>
-                  <View style={styles.sessionHeader}>
+                <View style={styles.sessionHeader}>
                     <Text style={styles.sessionTitle}>{s.title}</Text>
                     <Text style={styles.sessionStatus}>{s.status}</Text>
-                  </View>
-                  <Text style={styles.sessionMeta}>
+                </View>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                    <Feather
+                    name="calendar"
+                    size={12}
+                    color={colors.textMuted}
+                    style={{ marginRight: 4 }}
+                    />
+                    <Text style={styles.sessionMeta}>
                     {formatDateTime(s.scheduled_start)}
-                  </Text>
-                  {s.location ? (
+                    </Text>
+                </View>
+
+                {s.location ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Feather
+                        name="map-pin"
+                        size={12}
+                        color={colors.textMuted}
+                        style={{ marginRight: 4 }}
+                    />
                     <Text style={styles.sessionMeta}>{s.location}</Text>
-                  ) : null}
+                    </View>
+                ) : null}
                 </View>
               </TouchableOpacity>
             ))}
@@ -552,7 +601,13 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
 }) => {
   return (
     <ScrollView style={styles.tabContainer}>
-      <View style={styles.section}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Feather
+            name="tool"
+            size={16}
+            color={colors.text}
+            style={{ marginRight: 6 }}
+        />
         <Text style={styles.settingsTitle}>DM Tools</Text>
 
         {isDm ? (
@@ -661,109 +716,106 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
 /* ---------- STYLES ---------- */
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 8,
-    backgroundColor: '#fff',
+    headerContainer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.bgElevated,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   tabContainer: {
     flex: 1,
-    padding: 16,
+    padding: spacing.lg,
+    backgroundColor: colors.bg,
   },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
+    color: colors.text,
   },
   subtitle: {
     marginTop: 4,
     marginBottom: 8,
-    color: '#666',
+    color: colors.textMuted,
   },
   section: {
-    marginBottom: 16,
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
+  marginBottom: spacing.lg,
+  padding: spacing.md,
+  borderRadius: radii.md,
+  borderWidth: 1,
+  borderColor: colors.border,
+  backgroundColor: colors.card,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 6,
+    color: colors.text,
   },
   sectionBody: {
-    color: '#444',
+    color: colors.textMuted,
   },
   debugText: {
     marginTop: 4,
     fontSize: 10,
-    color: '#999',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    color: colors.textMuted,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   formContainer: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 8,
-  },
-  formLabel: {
-    marginTop: 4,
-    marginBottom: 4,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.cardSoft,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: radii.md,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.cardSoft,
   },
   multilineInput: {
     minHeight: 60,
     textAlignVertical: 'top',
   },
-  loaderRow: {
-    marginTop: 8,
-  },
-  sessionList: {
-    marginTop: 8,
-  },
   sessionCard: {
     borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 8,
-  },
-  sessionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.card,
   },
   sessionTitle: {
     fontWeight: '600',
     flex: 1,
     paddingRight: 8,
+    color: colors.text,
   },
   sessionStatus: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
   },
   sessionMeta: {
     fontSize: 13,
-    color: '#555',
+    color: colors.textMuted,
   },
   settingsContainer: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   settingsTitle: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+    color: colors.text,
   },
   dangerZone: {
     marginTop: 12,
@@ -771,40 +823,37 @@ const styles = StyleSheet.create({
   dangerTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#b00020',
+    color: colors.danger,
     marginBottom: 4,
-  },
-  inviteSection: {
-    marginTop: 8,
-  },
-  inviteList: {
-    marginTop: 8,
   },
   inviteCard: {
     borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 8,
-    padding: 8,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    padding: spacing.sm,
     marginBottom: 6,
+    backgroundColor: colors.cardSoft,
   },
   inviteCode: {
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
+    color: colors.text,
   },
   inviteMeta: {
     fontSize: 12,
-    color: '#555',
+    color: colors.textMuted,
   },
   inviteStatus: {
     marginTop: 4,
     fontSize: 12,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
   },
   sendPacketSection: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
+
 });
 
 export default CampaignDetailScreen;

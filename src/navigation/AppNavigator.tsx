@@ -3,6 +3,7 @@ import React from 'react';
 import CampaignDetailScreen from '../screens/campaigns/CampaignDetailScreen';
 import CampaignListScreen from '../screens/campaigns/CampaignListScreen';
 import SessionDetailSCreen from '../screens/sessions/SessionDetailScreen';
+import { colors } from '../theme';
 
 export type AppStackParamList = {
     Campaigns: undefined;
@@ -26,7 +27,15 @@ const Stack = createNativeStackNavigator<AppStackParamList>();
 
 const AppNavigator = () => {
     return (
-        <Stack.Navigator>
+        <Stack.Navigator
+            screenOptions={{
+                headerStyle: { backgroundColor: colors.bgElevated },
+                headerTintColor: colors.text,
+                headerTitleStyle: { color: colors.text },
+                headerShadowVisible: false,
+                contentStyle: { backgroundColor: colors.bg }, // main background
+            }}
+        >
             <Stack.Screen
                 name="Campaigns"
                 component={CampaignListScreen}

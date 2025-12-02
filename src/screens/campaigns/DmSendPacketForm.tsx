@@ -17,7 +17,7 @@ import {
     createPacketWithRecipients,
     EventPacketType,
 } from '../../api/packets';
-
+import { colors, radii, spacing } from '../../theme';
 interface DmSendPacketFormProps {
   campaignId: string;
 }
@@ -293,10 +293,11 @@ export default DmSendPacketForm;
 const styles = StyleSheet.create({
   container: {
     marginTop: 8,
-    padding: 8,
+    padding: spacing.sm,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    backgroundColor: colors.cardSoft,
   },
   centerRow: {
     flexDirection: 'row',
@@ -305,13 +306,13 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
-    color: '#666',
+    color: colors.textMuted,
     marginBottom: 8,
   },
   warningText: {
     fontSize: 12,
-    color: '#92400e',
-    backgroundColor: '#fffbeb',
+    color: colors.accent,
+    backgroundColor: '#451a03',
     borderRadius: 6,
     padding: 6,
     marginBottom: 8,
@@ -327,20 +328,20 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f5f5f5',
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
   typeChipActive: {
-    borderColor: '#4f46e5',
-    backgroundColor: '#e0e7ff',
+    borderColor: colors.accent,
+    backgroundColor: '#78350f',
   },
   typeChipText: {
     fontSize: 11,
-    color: '#444',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   typeChipTextActive: {
-    color: '#312e81',
+    color: colors.text,
     fontWeight: '700',
   },
   label: {
@@ -348,15 +349,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginTop: 4,
     marginBottom: 4,
+    color: colors.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
+    borderColor: colors.border,
+    borderRadius: radii.md,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
     fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.card,
   },
   textarea: {
     minHeight: 80,
@@ -371,11 +375,11 @@ const styles = StyleSheet.create({
   },
   selectAllText: {
     fontSize: 12,
-    color: '#4f46e5',
+    color: colors.accentAlt,
     fontWeight: '500',
   },
   selectAllTextDisabled: {
-    color: '#9ca3af',
+    color: colors.textMuted,
   },
   playerList: {
     marginBottom: 8,
@@ -390,16 +394,17 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#aaa',
+    borderColor: colors.border,
     marginRight: 8,
+    backgroundColor: colors.card,
   },
   checkboxChecked: {
-    backgroundColor: '#4f46e5',
-    borderColor: '#4f46e5',
+    backgroundColor: colors.accentAlt,
+    borderColor: colors.accentAlt,
   },
   playerName: {
     fontSize: 13,
-    color: '#333',
+    color: colors.text,
   },
   publishToggle: {
     flexDirection: 'row',
@@ -412,29 +417,30 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#aaa',
+    borderColor: colors.border,
     marginRight: 8,
+    backgroundColor: colors.card,
   },
   checkboxSmallChecked: {
-    backgroundColor: '#4f46e5',
-    borderColor: '#4f46e5',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   publishLabel: {
     fontSize: 12,
-    color: '#444',
+    color: colors.textMuted,
   },
   sendButton: {
     marginTop: 4,
-    borderRadius: 8,
+    borderRadius: radii.md,
     paddingVertical: 10,
     alignItems: 'center',
-    backgroundColor: '#4f46e5',
+    backgroundColor: colors.accent,
   },
   sendButtonDisabled: {
-    backgroundColor: '#9ca3af',
+    backgroundColor: colors.textMuted,
   },
   sendButtonText: {
-    color: '#fff',
+    color: '#000',
     fontWeight: '600',
   },
 });

@@ -1,5 +1,14 @@
 import { supabase } from './supabaseClient';
 
+export type CampaignRole = 'dm' | 'co_dm' | 'player';
+
+export interface Campaign {
+    id: string;
+    name: string;
+    description: string | null;
+    member_role: CampaignRole;
+}
+
 export type MyCampaign = {
     campaign_id: string;
     name: string;
@@ -8,15 +17,36 @@ export type MyCampaign = {
     created_at: string;
 };
 
-export async function fetchMyCampaigns() {
-    const { data, error } = await supabase.rpc('get_my_campaigns');
+export async function fetchCampaigns(): Promise<Campaign[]> {
+  const { data, error } = await supabase
+    .from('campaign_members')
+    .select(
+      `
+      role,
+      campaigns (
+        id,
+        name,
+        description
+      )
+    `
+    )
+    .order('created_at', { referencedTable: 'campaigns', ascending: false });
 
-    if (error) {
-        console.error('Error fetching campaigns:', error);
-        throw error;
-    }
+  if (error) {
+    console.error('fetchCampaigns error', error);
+    throw error;
+  }
 
-    return (data ?? []) as MyCampaign[];
+  // data is an array of rows like:
+  // { role: 'dm', campaigns: { id, name, description } }
+  return (data ?? [])
+    .filter((row: any) => row.campaigns) // just in case
+    .map((row: any) => ({
+      id: row.campaigns.id,
+      name: row.campaigns.name,
+      description: row.campaigns.description,
+      member_role: row.role as CampaignRole,
+    }));
 }
 
 export async function createCampaign(name: string, description?: string) {

@@ -1,4 +1,5 @@
 // src/screens/campaigns/CampaignPacketsScreen.tsx
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -10,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import { getInboxPackets, InboxPacket, markPacketRead } from '../../api/packets';
+import { colors, radii, spacing } from '../../theme';
 
 type Role = 'dm' | 'co_dm' | 'player';
 
@@ -108,11 +110,27 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
       >
         <View style={styles.cardHeaderRow}>
           <View style={styles.cardHeaderLeft}>
-            <Text style={styles.typeBadge}>{packet.type.toUpperCase()}</Text>
-            <Text style={styles.cardTitle} numberOfLines={1}>
-              {packet.title}
-            </Text>
-          </View>
+            <MaterialCommunityIcons
+                name={
+                packet.type === 'xp'
+                    ? 'star-four-points-outline'
+                    : packet.type === 'loot'
+                    ? 'treasure-chest'
+                    : packet.type === 'secret'
+                    ? 'eye-off-outline'
+                    : packet.type === 'announcement'
+                    ? 'bullhorn-outline'
+                    : 'scroll'
+                }
+                size={18}
+                color={colors.accent}
+                style={{ marginRight: 8 }}
+            />
+  <Text style={styles.cardTitle} numberOfLines={1}>
+    {packet.title}
+  </Text>
+</View>
+
           <View style={styles.cardHeaderRight}>
             {isUnread && <Text style={styles.unreadBadge}>NEW</Text>}
           </View>
@@ -194,20 +212,20 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 13,
-    color: '#666',
+    color: colors.textMuted,
     marginBottom: 8,
   },
   card: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 10,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    padding: spacing.sm,
     marginBottom: 8,
-    backgroundColor: '#fafafa',
+    backgroundColor: colors.card,
   },
   cardUnread: {
-    borderColor: '#8b5cf6',
-    backgroundColor: '#f5f3ff',
+    borderColor: colors.accentAlt,
+    backgroundColor: '#1e1b4b',
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -228,23 +246,25 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: '#eee',
+    borderRadius: 999,
+    backgroundColor: colors.cardSoft,
+    color: colors.textMuted,
     marginRight: 8,
   },
   cardTitle: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
+    color: colors.text,
   },
   unreadBadge: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#7c3aed',
+    color: colors.accentAlt,
   },
   metaText: {
     fontSize: 12,
-    color: '#777',
+    color: colors.textMuted,
     marginBottom: 4,
   },
   bodyContainer: {
@@ -252,12 +272,12 @@ const styles = StyleSheet.create({
   },
   bodyText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text,
   },
   expandHint: {
     marginTop: 4,
     fontSize: 11,
-    color: '#999',
+    color: colors.textMuted,
   },
   center: {
     paddingVertical: 16,
@@ -267,18 +287,18 @@ const styles = StyleSheet.create({
   helperText: {
     marginTop: 6,
     fontSize: 13,
-    color: '#666',
+    color: colors.textMuted,
   },
   errorTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#b91c1c',
+    color: colors.danger,
     marginBottom: 4,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 12,
-    color: '#991b1b',
+    color: colors.dangerBorder,
     textAlign: 'center',
   },
   emptyContainer: {
@@ -286,12 +306,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    color: '#777',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   debugText: {
     marginTop: 4,
     fontSize: 10,
-    color: '#aaa',
+    color: colors.textMuted,
   },
 });

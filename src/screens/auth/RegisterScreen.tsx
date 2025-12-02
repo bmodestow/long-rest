@@ -1,19 +1,18 @@
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+// src/screens/auth/RegisterScreen.tsx
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Button,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableWithoutFeedback
+  ActivityIndicator,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { signUp } from '../../api/auth';
+import LongRestLogoSvg from '../../components/LongRestLogoSvg';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
+import { layoutStyles } from '../../styles/layout';
+import { colors } from '../../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -21,105 +20,98 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleRegister = async () => {
-    if (!email || !password) {
-      Alert.alert('Missing info', 'Please enter an email and password.');
+    if (!email.trim() || !password) {
+      setError('Please enter an email and password.');
       return;
     }
 
+    setError(null);
     setLoading(true);
-    const { error } = await signUp(email.trim(), password, displayName || undefined);
-    setLoading(false);
-
-    if (error) {
-      Alert.alert('Sign up failed', error.message);
-    } else {
-      Alert.alert('Success', 'Account created! You can log in now.', [{ text: 'OK' }]);
+    try {
+      const { error: signUpError } = await signUp(
+        email.trim(),
+        password,
+        displayName || undefined
+      );
+      if (signUpError) {
+        setError(signUpError.message ?? 'Failed to sign up.');
+      } else {
+        // let auth listener redirect them, or:
+        // navigation.replace('Login');
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Something went wrong while creating your account.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.avoidingContainer}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // tweak if you add a header
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
+    <View style={layoutStyles.screen}>
+      <View style={{ alignItems: 'center', marginBottom: 24 }}>
+        <LongRestLogoSvg size={88} subtitle='Join the campfire'/>
+      </View>
+
+      <View style={layoutStyles.card}>
+        <Text style={layoutStyles.title}>Create an account</Text>
+        <Text style={layoutStyles.subtitle}>
+          Join your parties and track their Long Rests.
+        </Text>
+
+        {error && <Text style={layoutStyles.errorText}>{error}</Text>}
+
+        <TextInput
+          style={layoutStyles.input}
+          value={displayName}
+          onChangeText={setDisplayName}
+          placeholder="Display name (optional)"
+          placeholderTextColor={colors.textMuted}
+        />
+
+        <TextInput
+          style={layoutStyles.input}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="Email"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        <TextInput
+          style={layoutStyles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Password"
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry
+        />
+
+        <TouchableOpacity
+          style={layoutStyles.primaryButton}
+          onPress={handleRegister}
+          disabled={loading}
+          activeOpacity={0.8}
         >
-          <Text style={styles.title}>Create your account</Text>
+          {loading ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={layoutStyles.primaryButtonText}>Sign Up</Text>
+          )}
+        </TouchableOpacity>
 
-          <Text style={styles.label}>Display name (optional)</Text>
-          <TextInput
-            style={styles.input}
-            value={displayName}
-            onChangeText={setDisplayName}
-            returnKeyType="next"
-          />
-
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-            returnKeyType="next"
-          />
-
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={[styles.input, styles.lastInput]}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-            returnKeyType="done"
-          />
-
-          <Button
-            title={loading ? 'Creating account...' : 'Sign up'}
-            onPress={handleRegister}
-            disabled={loading}
-          />
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={layoutStyles.linkText}>
+            Already have an account? Sign in.
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  avoidingContainer: {
-    flex: 1,
-  },
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-  },
-  label: {
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  lastInput: {
-    marginBottom: 24,
-  },
-});
 
 export default RegisterScreen;

@@ -2,12 +2,17 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Button,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Button,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
 } from 'react-native';
 import { signIn } from '../../api/auth';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
@@ -17,7 +22,6 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -38,50 +42,66 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Long Rest</Text>
+    <KeyboardAvoidingView
+      style={styles.avoidingContainer}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0} // tweak if you have a header
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.title}>Long Rest</Text>
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            returnKeyType="next"
+          />
 
-      <Text style={styles.label}>Password</Text>
-      <TextInput
-        style={[styles.input, styles.passwordInput]}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            returnKeyType="done"
+          />
 
-      <Button
-        title={loading ? 'Logging in...' : 'Log in'}
-        onPress={handleLogin}
-        disabled={loading}
-      />
+          <Button
+            title={loading ? 'Logging in...' : 'Log in'}
+            onPress={handleLogin}
+            disabled={loading}
+          />
 
-      <View style={styles.footer}>
-        <Text>
-          New here?{' '}
-          <Text
-            style={styles.link}
-            onPress={() => navigation.navigate('Register')}
-          >
-            Create an account
-          </Text>
-        </Text>
-      </View>
-    </View>
+          <View style={styles.footer}>
+            <Text>
+              New here?{' '}
+              <Text
+                style={styles.link}
+                onPress={() => navigation.navigate('Register')}
+              >
+                Create an account
+              </Text>
+            </Text>
+          </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  avoidingContainer: {
     flex: 1,
+  },
+  container: {
+    flexGrow: 1, // Allows content expand & center nicely
     padding: 24,
     justifyContent: 'center',
   },

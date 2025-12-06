@@ -1,17 +1,17 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Button,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Button,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
@@ -19,6 +19,7 @@ import { createSession, fetchSessions, Session } from '../../api/sessions';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { colors, radii, spacing } from '../../theme';
 import { formatDateTime } from '../../utils/formatDate';
+import CampaignCharactersScreen from './CampaignCharactersScreen';
 import CampaignPacketsScreen from './CampaignPacketsScreen';
 import DmSendPacketForm from './DmSendPacketForm';
 
@@ -288,6 +289,8 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
                         return <Feather name="book-open" size={16} color={color} />;
                     case 'Sessions':
                         return <Feather name="calendar" size={16} color={color} />;
+                    case 'Characters':
+                        return <MaterialCommunityIcons name="account-group" size={16} color={color} />;
                     case 'Packets':
                         return <Feather name="mail" size={16} color={color} />;
                     case 'Recaps':
@@ -332,6 +335,14 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               campaignId={campaignId}
               memberRole={memberRole}
             />
+          )}
+        </Tab.Screen>
+
+        <Tab.Screen name="Characters">
+          {() => (
+            <View style={styles.tabContainer}>
+              <CampaignCharactersScreen campaignId={campaignId} role={memberRole} />
+            </View>
           )}
         </Tab.Screen>
 

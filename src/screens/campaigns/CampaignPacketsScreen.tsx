@@ -1,17 +1,25 @@
 // src/screens/campaigns/CampaignPacketsScreen.tsx
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { getInboxPackets, InboxPacket, markPacketRead } from '../../api/packets';
+import {
+  getInboxPackets,
+  InboxPacket,
+  markPacketRead,
+} from '../../api/packets';
+import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { colors, radii, spacing } from '../../theme';
+
+type AppNav = NativeStackNavigationProp<AppStackParamList, 'CampaignDetail'>;
 
 type Role = 'dm' | 'co_dm' | 'player';
 
@@ -19,18 +27,19 @@ interface CampaignPacketsScreenProps {
   campaignId: string;
   campaignName: string;
   role: Role;
+  navigation?: AppNav;
 }
 
 const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
   campaignId,
   campaignName,
   role,
+  navigation,
 }) => {
   const [packets, setPackets] = useState<InboxPacket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedPacketId, setExpandedPacketId] = useState<string | null>(null);
 
   const isDm = role === 'dm' || role === 'co_dm';
 
@@ -57,17 +66,18 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
     await loadPackets();
   };
 
-  const handleTogglePacket = async (item: InboxPacket) => {
-    const alreadyExpanded = expandedPacketId === item.packet.id;
-    setExpandedPacketId(alreadyExpanded ? null : item.packet.id);
+  const handleOpenPacket = async (item: InboxPacket) => {
+    const { packet, recipient } = item;
 
-    // Only players should mark packets as read;
-    // DMs/co-DMs seeing all recipients shouldn't mutate read state.
-    if (!item.recipient.has_read && !isDm) {
-      // Optimistic update
+    const baseTimestamp = packet.visible_from ?? packet.created_at;
+
+    // Optimistic read marking for players only
+    const shouldMarkRead = !recipient.has_read && !isDm;
+
+    if (shouldMarkRead) {
       setPackets((prev) =>
         prev.map((p) =>
-          p.packet.id === item.packet.id
+          p.packet.id === packet.id
             ? {
                 ...p,
                 recipient: {
@@ -81,18 +91,29 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
       );
 
       try {
-        await markPacketRead(item.packet.id);
+        await markPacketRead(packet.id);
       } catch (e) {
         console.warn('Failed to mark packet as read', e);
-        // You could optionally revert optimistic update here if you care.
+        // Optional: revert optimistic update if you care that much
       }
     }
+
+    // Navigate to Packet Detail screen
+    navigation?.navigate('PacketDetail', {
+      campaignId,
+      packetId: packet.id,
+      title: packet.title,
+      body: packet.body ?? '',
+      type: packet.type,
+      createdAt: baseTimestamp,
+      isRead: !shouldMarkRead,
+      // senderName is optional; omit unless you have a clear field like packet.sender_name
+    });
   };
 
   const renderPacketItem = ({ item }: { item: InboxPacket }) => {
     const { packet, recipient } = item;
     const isUnread = !recipient.has_read && !isDm;
-    const isExpanded = expandedPacketId === packet.id;
 
     let dateLabel = '';
     try {
@@ -105,31 +126,31 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
     return (
       <TouchableOpacity
         style={[styles.card, isUnread && styles.cardUnread]}
-        onPress={() => handleTogglePacket(item)}
+        onPress={() => handleOpenPacket(item)}
         activeOpacity={0.8}
       >
         <View style={styles.cardHeaderRow}>
           <View style={styles.cardHeaderLeft}>
             <MaterialCommunityIcons
-                name={
+              name={
                 packet.type === 'xp'
-                    ? 'star-four-points-outline'
-                    : packet.type === 'loot'
-                    ? 'treasure-chest'
-                    : packet.type === 'secret'
-                    ? 'eye-off-outline'
-                    : packet.type === 'announcement'
-                    ? 'bullhorn-outline'
-                    : 'scroll'
-                }
-                size={18}
-                color={colors.accent}
-                style={{ marginRight: 8 }}
+                  ? 'star-four-points-outline'
+                  : packet.type === 'loot'
+                  ? 'treasure-chest'
+                  : packet.type === 'secret'
+                  ? 'eye-off-outline'
+                  : packet.type === 'announcement'
+                  ? 'bullhorn-outline'
+                  : 'scroll'
+              }
+              size={18}
+              color={colors.accent}
+              style={{ marginRight: 8 }}
             />
-  <Text style={styles.cardTitle} numberOfLines={1}>
-    {packet.title}
-  </Text>
-</View>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {packet.title}
+            </Text>
+          </View>
 
           <View style={styles.cardHeaderRight}>
             {isUnread && <Text style={styles.unreadBadge}>NEW</Text>}
@@ -138,17 +159,14 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
 
         <Text style={styles.metaText}>{dateLabel}</Text>
 
-        {isExpanded && (
-          <View style={styles.bodyContainer}>
-            <Text style={styles.bodyText}>{packet.body}</Text>
-          </View>
-        )}
-
-        {!isExpanded && (
-          <Text style={styles.expandHint}>
-            Tap to {isExpanded ? 'collapse' : 'view details'}
+        {/* Short body preview */}
+        {packet.body ? (
+          <Text style={styles.bodyPreview} numberOfLines={2}>
+            {packet.body}
           </Text>
-        )}
+        ) : null}
+
+        <Text style={styles.expandHint}>Tap to view full packet</Text>
       </TouchableOpacity>
     );
   };
@@ -196,7 +214,6 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
         }
       />
 
-      {/* Debug line you can remove later if you want */}
       <Text style={styles.debugText}>
         Campaign: {campaignName} ({campaignId})
       </Text>
@@ -241,16 +258,6 @@ const styles = StyleSheet.create({
   cardHeaderRight: {
     marginLeft: 8,
   },
-  typeBadge: {
-    fontSize: 11,
-    fontWeight: '700',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: colors.cardSoft,
-    color: colors.textMuted,
-    marginRight: 8,
-  },
   cardTitle: {
     flex: 1,
     fontSize: 15,
@@ -267,15 +274,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: 4,
   },
-  bodyContainer: {
-    marginTop: 4,
-  },
-  bodyText: {
-    fontSize: 14,
+  bodyPreview: {
+    fontSize: 13,
     color: colors.text,
+    marginBottom: 2,
   },
   expandHint: {
-    marginTop: 4,
+    marginTop: 2,
     fontSize: 11,
     color: colors.textMuted,
   },

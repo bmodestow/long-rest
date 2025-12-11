@@ -1,23 +1,24 @@
 // src/screens/campaigns/DmSendPacketForm.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import {
-    CampaignMember,
-    fetchCampaignMembers,
+  CampaignMember,
+  fetchCampaignMembers,
 } from '../../api/campaignMembers';
 import {
-    createPacketWithRecipients,
-    EventPacketType,
+  createPacketWithRecipients,
+  EventPacketType,
 } from '../../api/packets';
 import { colors, radii, spacing } from '../../theme';
+
 interface DmSendPacketFormProps {
   campaignId: string;
 }
@@ -40,7 +41,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
   const [isPublishing, setIsPublishing] = useState(true);
   const [sending, setSending] = useState(false);
 
-  // NEW: per-player selection
+  // Per-player selection
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
 
   const loadMembers = useCallback(async () => {
@@ -67,7 +68,11 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
 
   // Default selection: all players, when players first load
   useEffect(() => {
-    if (!loadingMembers && playerMembers.length > 0 && selectedPlayerIds.length === 0) {
+    if (
+      !loadingMembers &&
+      playerMembers.length > 0 &&
+      selectedPlayerIds.length === 0
+    ) {
       setSelectedPlayerIds(playerMembers.map((m) => m.id));
     }
   }, [loadingMembers, playerMembers, selectedPlayerIds.length]);
@@ -80,10 +85,8 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
 
   const toggleSelectAll = () => {
     if (selectedPlayerIds.length === playerMembers.length) {
-      // Clear all
       setSelectedPlayerIds([]);
     } else {
-      // Select all
       setSelectedPlayerIds(playerMembers.map((m) => m.id));
     }
   };
@@ -147,7 +150,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
   if (loadingMembers) {
     return (
       <View style={styles.centerRow}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.accent} />
         <Text style={styles.helperText}>Loading players...</Text>
       </View>
     );
@@ -156,8 +159,8 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.helperText}>
-        Choose a packet type, write the contents, then select which players should
-        receive it.
+        Choose a packet type, write the contents, then select which players
+        should receive it.
       </Text>
 
       {playerMembers.length === 0 && (
@@ -212,7 +215,10 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
       {/* Player selection */}
       <View style={styles.recipientHeaderRow}>
         <Text style={styles.label}>Recipients</Text>
-        <TouchableOpacity onPress={toggleSelectAll} disabled={playerMembers.length === 0}>
+        <TouchableOpacity
+          onPress={toggleSelectAll}
+          disabled={playerMembers.length === 0}
+        >
           <Text
             style={[
               styles.selectAllText,
@@ -274,11 +280,17 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
       <TouchableOpacity
         style={[
           styles.sendButton,
-          (sending || selectedPlayerIds.length === 0 || playerMembers.length === 0) &&
+          (sending ||
+            selectedPlayerIds.length === 0 ||
+            playerMembers.length === 0) &&
             styles.sendButtonDisabled,
         ]}
         onPress={handleSend}
-        disabled={sending || selectedPlayerIds.length === 0 || playerMembers.length === 0}
+        disabled={
+          sending ||
+          selectedPlayerIds.length === 0 ||
+          playerMembers.length === 0
+        }
       >
         <Text style={styles.sendButtonText}>
           {sending ? 'Sending...' : 'Send Packet'}

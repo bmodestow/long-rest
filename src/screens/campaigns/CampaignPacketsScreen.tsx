@@ -94,11 +94,10 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
         await markPacketRead(packet.id);
       } catch (e) {
         console.warn('Failed to mark packet as read', e);
-        // Optional: revert optimistic update if you care that much
+        // Optional: revert optimistic update if needed
       }
     }
 
-    // Navigate to Packet Detail screen
     navigation?.navigate('PacketDetail', {
       campaignId,
       packetId: packet.id,
@@ -107,7 +106,6 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
       type: packet.type,
       createdAt: baseTimestamp,
       isRead: !shouldMarkRead,
-      // senderName is optional; omit unless you have a clear field like packet.sender_name
     });
   };
 
@@ -159,7 +157,6 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
 
         <Text style={styles.metaText}>{dateLabel}</Text>
 
-        {/* Short body preview */}
         {packet.body ? (
           <Text style={styles.bodyPreview} numberOfLines={2}>
             {packet.body}
@@ -174,7 +171,7 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
   if (loading && !refreshing) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.accent} />
         <Text style={styles.helperText}>Loading packets...</Text>
       </View>
     );

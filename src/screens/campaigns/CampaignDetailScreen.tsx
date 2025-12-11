@@ -16,6 +16,7 @@ import {
 import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
 import { createSession, fetchSessions, Session } from '../../api/sessions';
+import { ScreenContainer } from '../../components/ScreenContainer';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { colors, radii, spacing } from '../../theme';
 import { formatDateTime } from '../../utils/formatDate';
@@ -63,11 +64,11 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   useEffect(() => {
     navigation.setOptions({
-        title: editingName || name,
-        headerStyle: { backgroundColor: colors.bgElevated },
-        headerTintColor: colors.text,
-        headerTitleStyle: { color: colors.text },
-        headerShadowVisible: false // hides the grey bottom border on iOS
+      title: editingName || name,
+      headerStyle: { backgroundColor: colors.bgElevated },
+      headerTintColor: colors.text,
+      headerTitleStyle: { color: colors.text },
+      headerShadowVisible: false, // hides the grey bottom border on iOS
     });
   }, [navigation, editingName, name]);
 
@@ -171,7 +172,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       await loadSessions();
     } catch (err: any) {
       Alert.alert(
-        'Error creaing session',
+        'Error creating session',
         err?.message ?? 'Something went wrong while creating the session.'
       );
     } finally {
@@ -202,7 +203,9 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const renderInviteStatus = (invite: CampaignInvite) => {
     if (invite.used_by_user_id) {
-      return `Used at ${invite.used_at ? formatDateTime(invite.used_at) : ''}`.trim();
+      return `Used at ${
+        invite.used_at ? formatDateTime(invite.used_at) : ''
+      }`.trim();
     }
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       return 'Expired';
@@ -218,7 +221,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
     setSettingsLoading(true);
     try {
-      const updated = await updateCampaign(campaignId, {
+      await updateCampaign(campaignId, {
         name: editingName.trim(),
         description: editingDescription.trim() || null,
       });
@@ -226,7 +229,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       Alert.alert('Saved', 'Campaign settings updated.');
     } catch (err: any) {
       Alert.alert(
-        'Error:',
+        'Error',
         err?.message ?? 'Failed to update campaign settings.'
       );
     } finally {
@@ -237,7 +240,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const handleDeleteCampaign = () => {
     Alert.alert(
       'Delete campaign',
-      'Are you sure you want to delte this campaign? This cannot be undone.',
+      'Are you sure you want to delete this campaign? This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -264,7 +267,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <ScreenContainer style={{ paddingHorizontal: 0, paddingVertical: 0 }}>
       {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{editingName || name}</Text>
@@ -273,38 +276,43 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
       <Tab.Navigator
         screenOptions={({ route }) => ({
-            tabBarScrollEnabled: true,
-            tabBarIndicatorStyle: { backgroundColor: colors.accent },
-            tabBarStyle: { backgroundColor: colors.bgElevated },
-            tabBarLabelStyle: {
-                fontSize: 12,
-                fontWeight: '600',
-                textTransform: 'none',
-            },
-            tabBarActiveTintColor: colors.accent,
-            tabBarInactiveTintColor: colors.textMuted,
-            tabBarIcon: ({ color }) => {
-                switch (route.name) {
-                    case 'Overview':
-                        return <Feather name="book-open" size={16} color={color} />;
-                    case 'Sessions':
-                        return <Feather name="calendar" size={16} color={color} />;
-                    case 'Characters':
-                        return <MaterialCommunityIcons name="account-group" size={16} color={color} />;
-                    case 'Packets':
-                        return <Feather name="mail" size={16} color={color} />;
-                    case 'Recaps':
-                        return <Feather name="file-text" size={16} color={color} />;
-                    case 'DmTools':
-                        return <Feather name="settings" size={16} color={color} />;
-                    default:
-                        return null;
-                }
-            },
-            tabBarShowIcon: true,
+          tabBarScrollEnabled: true,
+          tabBarIndicatorStyle: { backgroundColor: colors.accent },
+          tabBarStyle: { backgroundColor: colors.bgElevated },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '600',
+            textTransform: 'none',
+          },
+          tabBarActiveTintColor: colors.accent,
+          tabBarInactiveTintColor: colors.textMuted,
+          tabBarIcon: ({ color }) => {
+            switch (route.name) {
+              case 'Overview':
+                return <Feather name="book-open" size={16} color={color} />;
+              case 'Sessions':
+                return <Feather name="calendar" size={16} color={color} />;
+              case 'Characters':
+                return (
+                  <MaterialCommunityIcons
+                    name="account-group"
+                    size={16}
+                    color={color}
+                  />
+                );
+              case 'Packets':
+                return <Feather name="mail" size={16} color={color} />;
+              case 'Recaps':
+                return <Feather name="file-text" size={16} color={color} />;
+              case 'DmTools':
+                return <Feather name="settings" size={16} color={color} />;
+              default:
+                return null;
+            }
+          },
+          tabBarShowIcon: true,
         })}
-        >
-
+      >
         <Tab.Screen name="Overview">
           {() => (
             <OverviewTab
@@ -341,7 +349,10 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         <Tab.Screen name="Characters">
           {() => (
             <View style={styles.tabContainer}>
-              <CampaignCharactersScreen campaignId={campaignId} role={memberRole} />
+              <CampaignCharactersScreen
+                campaignId={campaignId}
+                role={memberRole}
+              />
             </View>
           )}
         </Tab.Screen>
@@ -362,10 +373,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           {() => <RecapsTab />}
         </Tab.Screen>
 
-        <Tab.Screen
-          name="DmTools"
-          options={{ title: 'DM Tools' }}
-        >
+        <Tab.Screen name="DmTools" options={{ title: 'DM Tools' }}>
           {() => (
             <DmToolsTab
               campaignId={campaignId}
@@ -389,7 +397,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       </Tab.Navigator>
 
       <Text style={styles.debugText}>Campaign ID: {campaignId}</Text>
-    </View>
+    </ScreenContainer>
   );
 };
 
@@ -524,34 +532,42 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
                 activeOpacity={0.7}
               >
                 <View style={styles.sessionCard}>
-                <View style={styles.sessionHeader}>
+                  <View style={styles.sessionHeader}>
                     <Text style={styles.sessionTitle}>{s.title}</Text>
                     <Text style={styles.sessionStatus}>{s.status}</Text>
-                </View>
+                  </View>
 
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 2,
+                    }}
+                  >
                     <Feather
-                    name="calendar"
-                    size={12}
-                    color={colors.textMuted}
-                    style={{ marginRight: 4 }}
+                      name="calendar"
+                      size={12}
+                      color={colors.textMuted}
+                      style={{ marginRight: 4 }}
                     />
                     <Text style={styles.sessionMeta}>
-                    {formatDateTime(s.scheduled_start)}
+                      {formatDateTime(s.scheduled_start)}
                     </Text>
-                </View>
+                  </View>
 
-                {s.location ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Feather
+                  {s.location ? (
+                    <View
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
+                    >
+                      <Feather
                         name="map-pin"
                         size={12}
                         color={colors.textMuted}
                         style={{ marginRight: 4 }}
-                    />
-                    <Text style={styles.sessionMeta}>{s.location}</Text>
+                      />
+                      <Text style={styles.sessionMeta}>{s.location}</Text>
                     </View>
-                ) : null}
+                  ) : null}
                 </View>
               </TouchableOpacity>
             ))}
@@ -568,7 +584,8 @@ const RecapsTab: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recaps</Text>
         <Text style={styles.sectionBody}>
-          Session recaps written by the DM will live here so players can catch up between Long Rests.
+          Session recaps written by the DM will live here so players can catch
+          up between Long Rests.
         </Text>
       </View>
     </ScrollView>
@@ -612,114 +629,122 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
 }) => {
   return (
     <ScrollView style={styles.tabContainer}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 8,
+        }}
+      >
         <Feather
-            name="tool"
-            size={16}
-            color={colors.text}
-            style={{ marginRight: 6 }}
+          name="tool"
+          size={16}
+          color={colors.text}
+          style={{ marginRight: 6 }}
         />
         <Text style={styles.settingsTitle}>DM Tools</Text>
-
-        {isDm ? (
-          <>
-            {/* Send Packet */}
-            <View style={styles.sendPacketSection}>
-              <Text style={styles.settingsTitle}>Send Packet to Players</Text>
-              <DmSendPacketForm campaignId={campaignId} />
-            </View>
-
-            {/* Campaign Settings */}
-            <View style={styles.settingsContainer}>
-              <Text style={styles.settingsTitle}>Campaign Settings</Text>
-
-              <Text style={styles.formLabel}>Name</Text>
-              <TextInput
-                style={styles.input}
-                value={editingName}
-                onChangeText={setEditingName}
-                placeholder="Campaign Name"
-              />
-
-              <Text style={styles.formLabel}>Description</Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                value={editingDescription}
-                onChangeText={setEditingDescription}
-                placeholder="Short description of this campaign."
-                multiline
-              />
-
-              <Button
-                title={settingsLoading ? 'Saving...' : 'Save Changes'}
-                onPress={handleSaveSettings}
-                disabled={settingsLoading}
-              />
-
-              <View style={styles.dangerZone}>
-                <Text style={styles.dangerTitle}>Danger zone</Text>
-                <Button
-                  title={deleteLoading ? 'Deleting...' : 'Delete Campaign'}
-                  onPress={handleDeleteCampaign}
-                  color="#b00020"
-                  disabled={deleteLoading}
-                />
-              </View>
-            </View>
-
-            {/* Invite Codes */}
-            <View style={styles.inviteSection}>
-              <Text style={styles.settingsTitle}>Invite Codes</Text>
-              <Text style={styles.sectionBody}>
-                Generate invite codes and share them with your players so they
-                can join this campaign.
-              </Text>
-
-              <View style={{ marginVertical: 8 }}>
-                <Button
-                  title={inviteActionLoading ? 'Creating code...' : 'Generate Invite Code'}
-                  onPress={handleCreateInvite}
-                  disabled={inviteActionLoading}
-                />
-              </View>
-
-              {invitesLoading ? (
-                <View style={styles.loaderRow}>
-                  <ActivityIndicator />
-                </View>
-              ) : invites.length === 0 ? (
-                <Text style={styles.sectionBody}>
-                  No invite codes yet. Generate one above.
-                </Text>
-              ) : (
-                <View style={styles.inviteList}>
-                  {invites.map((inv) => (
-                    <View key={inv.id} style={styles.inviteCard}>
-                      <Text style={styles.inviteCode}>{inv.code}</Text>
-                      <Text style={styles.inviteMeta}>
-                        Created: {formatDateTime(inv.created_at)}
-                      </Text>
-                      {inv.expires_at && (
-                        <Text style={styles.inviteMeta}>
-                          Expires: {formatDateTime(inv.expires_at)}
-                        </Text>
-                      )}
-                      <Text style={styles.inviteStatus}>
-                        Status: {renderInviteStatus(inv)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </>
-        ) : (
-          <Text style={styles.sectionBody}>
-            DM-only tools will appear here. Ask your DM for an invite code to
-            join campaigns.
-          </Text>
-        )}
       </View>
+
+      {isDm ? (
+        <>
+          {/* Send Packet */}
+          <View style={styles.sendPacketSection}>
+            <Text style={styles.settingsTitle}>Send Packet to Players</Text>
+            <DmSendPacketForm campaignId={campaignId} />
+          </View>
+
+          {/* Campaign Settings */}
+          <View style={styles.settingsContainer}>
+            <Text style={styles.settingsTitle}>Campaign Settings</Text>
+
+            <Text style={styles.formLabel}>Name</Text>
+            <TextInput
+              style={styles.input}
+              value={editingName}
+              onChangeText={setEditingName}
+              placeholder="Campaign Name"
+            />
+
+            <Text style={styles.formLabel}>Description</Text>
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              value={editingDescription}
+              onChangeText={setEditingDescription}
+              placeholder="Short description of this campaign."
+              multiline
+            />
+
+            <Button
+              title={settingsLoading ? 'Saving...' : 'Save Changes'}
+              onPress={handleSaveSettings}
+              disabled={settingsLoading}
+            />
+
+            <View style={styles.dangerZone}>
+              <Text style={styles.dangerTitle}>Danger zone</Text>
+              <Button
+                title={deleteLoading ? 'Deleting...' : 'Delete Campaign'}
+                onPress={handleDeleteCampaign}
+                color="#b00020"
+                disabled={deleteLoading}
+              />
+            </View>
+          </View>
+
+          {/* Invite Codes */}
+          <View style={styles.inviteSection}>
+            <Text style={styles.settingsTitle}>Invite Codes</Text>
+            <Text style={styles.sectionBody}>
+              Generate invite codes and share them with your players so they can
+              join this campaign.
+            </Text>
+
+            <View style={{ marginVertical: 8 }}>
+              <Button
+                title={
+                  inviteActionLoading ? 'Creating code...' : 'Generate Invite Code'
+                }
+                onPress={handleCreateInvite}
+                disabled={inviteActionLoading}
+              />
+            </View>
+
+            {invitesLoading ? (
+              <View style={styles.loaderRow}>
+                <ActivityIndicator />
+              </View>
+            ) : invites.length === 0 ? (
+              <Text style={styles.sectionBody}>
+                No invite codes yet. Generate one above.
+              </Text>
+            ) : (
+              <View style={styles.inviteList}>
+                {invites.map((inv) => (
+                  <View key={inv.id} style={styles.inviteCard}>
+                    <Text style={styles.inviteCode}>{inv.code}</Text>
+                    <Text style={styles.inviteMeta}>
+                      Created: {formatDateTime(inv.created_at)}
+                    </Text>
+                    {inv.expires_at && (
+                      <Text style={styles.inviteMeta}>
+                        Expires: {formatDateTime(inv.expires_at)}
+                      </Text>
+                    )}
+                    <Text style={styles.inviteStatus}>
+                      Status: {renderInviteStatus(inv)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </>
+      ) : (
+        <Text style={styles.sectionBody}>
+          DM-only tools will appear here. Ask your DM for an invite code to join
+          campaigns.
+        </Text>
+      )}
     </ScrollView>
   );
 };
@@ -727,7 +752,7 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
 /* ---------- STYLES ---------- */
 
 const styles = StyleSheet.create({
-    headerContainer: {
+  headerContainer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
@@ -751,12 +776,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   section: {
-  marginBottom: spacing.lg,
-  padding: spacing.md,
-  borderRadius: radii.md,
-  borderWidth: 1,
-  borderColor: colors.border,
-  backgroundColor: colors.card,
+    marginBottom: spacing.lg,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
   },
   sectionTitle: {
     fontSize: 18,
@@ -804,6 +829,11 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     marginBottom: spacing.sm,
     backgroundColor: colors.card,
+  },
+  sessionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   sessionTitle: {
     fontWeight: '600',
@@ -864,7 +894,16 @@ const styles = StyleSheet.create({
   sendPacketSection: {
     marginBottom: spacing.lg,
   },
-
+  loaderRow: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sessionList: {
+    marginTop: spacing.sm,
+  },
+  inviteList: {
+    marginTop: spacing.sm,
+  },
 });
 
 export default CampaignDetailScreen;

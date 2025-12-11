@@ -7,12 +7,12 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Campaign, fetchCampaigns } from '../../api/campaigns';
+import PressableScale from '../../components/PressableScale';
+import { ScreenContainer } from '../../components/ScreenContainer';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
-import layoutStyles from '../../styles/layout';
 import { colors, radii, spacing } from '../../theme';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'CampaignList'>;
@@ -38,66 +38,64 @@ const CampaignListScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   const renderItem = ({ item }: { item: Campaign }) => (
-  <TouchableOpacity
-    style={styles.card}
-    onPress={() =>
-      navigation.navigate('CampaignDetail', {
-        campaignId: item.id,
-        name: item.name,
-        description: item.description,
-        memberRole: item.member_role,
-      })
-    }
-    activeOpacity={0.8}
-  >
-    <View style={styles.cardHeader}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <MaterialCommunityIcons
-          name="dice-d20"
-          size={18}
-          color={colors.accent}
-          style={{ marginRight: 8 }}
-        />
-        <Text style={styles.cardTitle}>{item.name}</Text>
+    <PressableScale
+      style={styles.card}
+      onPress={() =>
+        navigation.navigate('CampaignDetail', {
+          campaignId: item.id,
+          name: item.name,
+          description: item.description,
+          memberRole: item.member_role,
+        })
+      }
+    >
+      <View style={styles.cardHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialCommunityIcons
+            name="dice-d20"
+            size={18}
+            color={colors.accent}
+            style={{ marginRight: 8 }}
+          />
+          <Text style={styles.cardTitle}>{item.name}</Text>
+        </View>
+
+        <View style={styles.rolePill}>
+          <Feather
+            name={item.member_role === 'player' ? 'user' : 'shield'}
+            size={12}
+            color={colors.text}
+          />
+          <Text style={styles.rolePillText}>
+            {item.member_role === 'dm'
+              ? 'DM'
+              : item.member_role === 'co_dm'
+              ? 'Co-DM'
+              : 'Player'}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.rolePill}>
-        <Feather
-          name={item.member_role === 'player' ? 'user' : 'shield'}
-          size={12}
-          color={colors.text}
-        />
-        <Text style={styles.rolePillText}>
-          {item.member_role === 'dm'
-            ? 'DM'
-            : item.member_role === 'co_dm'
-            ? 'Co-DM'
-            : 'Player'}
+      {item.description ? (
+        <Text style={styles.cardBody} numberOfLines={2}>
+          {item.description}
         </Text>
-      </View>
-    </View>
-
-    {item.description ? (
-      <Text style={styles.cardBody} numberOfLines={2}>
-        {item.description}
-      </Text>
-    ) : (
-      <Text style={styles.cardBodyMuted}>No description yet.</Text>
-    )}
-  </TouchableOpacity>
-);
-
+      ) : (
+        <Text style={styles.cardBodyMuted}>No description yet.</Text>
+      )}
+    </PressableScale>
+  );
 
   if (loading) {
     return (
-      <View style={[layoutStyles.screen, styles.center]}>
+      <ScreenContainer center>
         <ActivityIndicator color={colors.accent} />
-      </View>
+      </ScreenContainer>
     );
   }
 
   return (
-    <View style={layoutStyles.screen}>
+    <ScreenContainer>
       {campaigns.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>
@@ -109,10 +107,13 @@ const CampaignListScreen: React.FC<Props> = ({ navigation }) => {
           data={campaigns}
           keyExtractor={(c) => c.id}
           renderItem={renderItem}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+          ItemSeparatorComponent={() => (
+            <View style={{ height: spacing.sm }} />
+          )}
+          contentContainerStyle={{ paddingVertical: spacing.sm }}
         />
       )}
-    </View>
+    </ScreenContainer>
   );
 };
 

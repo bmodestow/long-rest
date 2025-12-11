@@ -10,8 +10,9 @@ import {
 } from 'react-native';
 import { signUp } from '../../api/auth';
 import LongRestLogoSvg from '../../components/LongRestLogoSvg';
+import { ScreenContainer } from '../../components/ScreenContainer';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
-import { layoutStyles } from '../../styles/layout';
+import layoutStyles from '../../styles/layout';
 import { colors } from '../../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
@@ -51,9 +52,9 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={layoutStyles.screen}>
+    <ScreenContainer scroll center>
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
-        <LongRestLogoSvg size={88} subtitle='Join the campfire'/>
+        <LongRestLogoSvg size={88} subtitle="Join the campfire" />
       </View>
 
       <View style={layoutStyles.card}>
@@ -98,7 +99,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color="#000" />
+            <ActivityIndicator color={colors.bg} />
           ) : (
             <Text style={layoutStyles.primaryButtonText}>Sign Up</Text>
           )}
@@ -110,7 +111,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScreenContainer>
   );
 };
 

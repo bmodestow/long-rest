@@ -1,7 +1,8 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import * as Clipboard from 'expo-clipboard';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -10,13 +11,14 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
 import { createSession, fetchSessions, Session } from '../../api/sessions';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { Toast } from '../../components/Toast';
+import { PressableScale } from '../../components/motion/PressableScale';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { colors, radii, spacing } from '../../theme';
 import { formatDateTime } from '../../utils/formatDate';
@@ -49,10 +51,14 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [sessionLocation, setSessionLocation] = useState('');
   const [sessionActionLoading, setSessionActionLoading] = useState(false);
 
-  // Invites state
+  // Invites + Toast state
   const [invites, setInvites] = useState<CampaignInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
   const [inviteActionLoading, setInviteActionLoading] = useState(false);
+
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastSeq = useRef(0);
 
   // Settings state
   const [editingName, setEditingName] = useState(name);
@@ -266,6 +272,27 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     );
   };
 
+  const showToast = (msg: string) => {
+    toastSeq.current += 1;
+    const mySeq = toastSeq.current;
+    setToastMsg(msg);
+    setToastVisible(true);
+
+    setTimeout(() => {
+      if (toastSeq.current === mySeq) setToastVisible(false);
+    }, 1700);
+  };
+
+  const handleCopyInviteCode = async (code: string) => {
+    try {
+      await Clipboard.setStringAsync(code);
+      showToast('Invite code copied!');
+    } catch {
+      showToast('Could not copy code.');
+    }
+  };
+
+
   return (
     <ScreenContainer style={{ paddingHorizontal: 0, paddingVertical: 0 }}>
       {/* Header */}
@@ -391,12 +418,20 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               inviteActionLoading={inviteActionLoading}
               handleCreateInvite={handleCreateInvite}
               renderInviteStatus={renderInviteStatus}
+              onCopyInviteCode={handleCopyInviteCode}
             />
           )}
         </Tab.Screen>
       </Tab.Navigator>
 
       <Text style={styles.debugText}>Campaign ID: {campaignId}</Text>
+
+      <Toast
+        message={toastMsg}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
+      />
+
     </ScreenContainer>
   );
 };
@@ -517,14 +552,14 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
         ) : (
           <View style={styles.sessionList}>
             {sessions.map((s) => (
-              <TouchableOpacity
+              <PressableScale
                 key={s.id}
                 onPress={() =>
                   navigation.navigate('SessionDetail', {
                     sessionId: s.id,
                     campaignId,
                     title: s.title,
-                    scheduledStart: s.scheduled_start,
+                    scheduledStart: s.start_at,
                     location: s.location,
                     memberRole,
                   })
@@ -551,7 +586,7 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
                       style={{ marginRight: 4 }}
                     />
                     <Text style={styles.sessionMeta}>
-                      {formatDateTime(s.scheduled_start)}
+                      {formatDateTime(s.start_at)}
                     </Text>
                   </View>
 
@@ -569,7 +604,7 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
                     </View>
                   ) : null}
                 </View>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
         )}
@@ -608,6 +643,7 @@ interface DmToolsTabProps {
   inviteActionLoading: boolean;
   handleCreateInvite: () => void;
   renderInviteStatus: (invite: CampaignInvite) => string;
+  onCopyInviteCode: (code: string) => void;
 }
 
 const DmToolsTab: React.FC<DmToolsTabProps> = ({
@@ -626,6 +662,7 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
   inviteActionLoading,
   handleCreateInvite,
   renderInviteStatus,
+  onCopyInviteCode,
 }) => {
   return (
     <ScrollView style={styles.tabContainer}>
@@ -721,18 +758,35 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
               <View style={styles.inviteList}>
                 {invites.map((inv) => (
                   <View key={inv.id} style={styles.inviteCard}>
-                    <Text style={styles.inviteCode}>{inv.code}</Text>
-                    <Text style={styles.inviteMeta}>
-                      Created: {formatDateTime(inv.created_at)}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={[styles.inviteCode, { flex: 1 }]}>{inv.code}</Text>
+
+                      <PressableScale
+                        onPress={() => onCopyInviteCode(inv.code)}
+                        style={{
+                          paddingHorizontal: spacing.sm,
+                          paddingVertical: spacing.xs,
+                          borderRadius: radii.sm,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          backgroundColor: colors.card,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                        }}
+                        accessibilityRole="button"
+                      >
+                        <Feather name="copy" size={14} color={colors.textMuted} />
+                        <Text style={{ marginLeft: 6, color: colors.textMuted, fontSize: 12 }}>
+                          Copy
+                        </Text>
+                      </PressableScale>
+                    </View>
+
+                    <Text style={styles.inviteMeta}>Created: {formatDateTime(inv.created_at)}</Text>
                     {inv.expires_at && (
-                      <Text style={styles.inviteMeta}>
-                        Expires: {formatDateTime(inv.expires_at)}
-                      </Text>
+                      <Text style={styles.inviteMeta}>Expires: {formatDateTime(inv.expires_at)}</Text>
                     )}
-                    <Text style={styles.inviteStatus}>
-                      Status: {renderInviteStatus(inv)}
-                    </Text>
+                    <Text style={styles.inviteStatus}>Status: {renderInviteStatus(inv)}</Text>
                   </View>
                 ))}
               </View>

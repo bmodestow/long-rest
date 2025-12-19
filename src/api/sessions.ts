@@ -4,7 +4,7 @@ export type Session = {
     id: string;
     campaign_id: string;
     title: string;
-    scheduled_start: string;
+    start_at: string;
     scheduled_end: string | null;
     location: string | null;
     status: 'planned' | 'completed' | 'cancelled';
@@ -16,7 +16,7 @@ export async function fetchSessions(campaignId: string): Promise<Session[]> {
         .from('sessions')
         .select('*')
         .eq('campaign_id', campaignId)
-        .order('scheduled_start', { ascending: true });
+        .order('start_at', { ascending: true });
     
     if (error) {
         console.error('Error fetching sessions:', error);
@@ -29,7 +29,7 @@ export async function fetchSessions(campaignId: string): Promise<Session[]> {
 export async function createSession(
     campaignId: string,
     title: string,
-    scheduledStart: string,
+    startAt: string,
     location?: string
 ): Promise<Session> {
     const { data, error } = await supabase
@@ -37,9 +37,8 @@ export async function createSession(
         .insert({
             campaign_id: campaignId,
             title,
-            scheduled_start: scheduledStart,
+            start_at: startAt,
             location: location ?? null,
-            status: 'planned',
         })
         .select('*')
         .single()

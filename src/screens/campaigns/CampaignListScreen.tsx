@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Campaign, fetchCampaigns } from '../../api/campaigns';
-import PressableScale from '../../components/PressableScale';
+import { PressableScale } from '../../components/motion/PressableScale';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { colors, radii, spacing } from '../../theme';

@@ -8,15 +8,16 @@ import {
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { signIn } from '../../api/auth';
 import LongRestLogoSvg from '../../components/LongRestLogoSvg';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { EnterFadeSlide } from '../../components/motion/EnterFadeSlide';
+import { PressableScale } from '../../components/motion/PressableScale';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import layoutStyles from '../../styles/layout';
-import { colors } from '../../theme';
+import { colors, spacing } from '../../theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -51,65 +52,73 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // If you still see overlap on iOS, bump this to 80-100 depending on your header height.
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
           keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            paddingHorizontal: spacing.xl,
+            paddingVertical: spacing.xl,
+          }}
         >
-          <View style={{ alignItems: 'center', marginBottom: 24 }}>
-            <LongRestLogoSvg size={96} />
-          </View>
+          <EnterFadeSlide style={{ width: '100%' }}>
+            <View style={{ alignItems: 'center', marginBottom: 24 }}>
+              <LongRestLogoSvg size={96} />
+            </View>
 
-          <View style={layoutStyles.card}>
-            <Text style={layoutStyles.title}>Long Rest</Text>
-            <Text style={layoutStyles.subtitle}>
-              Sign in to your campaign hub.
-            </Text>
-
-            {error && <Text style={layoutStyles.errorText}>{error}</Text>}
-
-            <TextInput
-              style={layoutStyles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Email"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              returnKeyType="next"
-            />
-
-            <TextInput
-              style={layoutStyles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Password"
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry
-              returnKeyType="go"
-              onSubmitEditing={handleLogin}
-            />
-
-            <TouchableOpacity
-              style={layoutStyles.primaryButton}
-              onPress={handleLogin}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.bg} />
-              ) : (
-                <Text style={layoutStyles.primaryButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={layoutStyles.linkText}>
-                New here? Create a Long Rest account.
+            <View style={layoutStyles.card}>
+              <Text style={layoutStyles.title}>Long Rest</Text>
+              <Text style={layoutStyles.subtitle}>
+                Sign in to your campaign hub.
               </Text>
-            </TouchableOpacity>
-          </View>
+
+              {error && <Text style={layoutStyles.errorText}>{error}</Text>}
+
+              <TextInput
+                style={layoutStyles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                returnKeyType="next"
+              />
+
+              <TextInput
+                style={layoutStyles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+              />
+
+              <PressableScale
+                style={layoutStyles.primaryButton}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.bg} />
+                ) : (
+                  <Text style={layoutStyles.primaryButtonText}>Sign In</Text>
+                )}
+              </PressableScale>
+
+              <PressableScale onPress={() => navigation.navigate('Register')}>
+                <Text style={layoutStyles.linkText}>
+                  New here? Create a Long Rest account.
+                </Text>
+              </PressableScale>
+            </View>
+          </EnterFadeSlide>
         </ScrollView>
       </KeyboardAvoidingView>
     </ScreenContainer>

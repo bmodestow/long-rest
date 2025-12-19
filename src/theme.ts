@@ -46,3 +46,18 @@ export const theme = {
   spacing,
   fonts,
 };
+
+export const motion = {
+  duration: {
+    instant: 90,
+    fast: 140,
+    normal: 220,
+    slow: 320,
+  },
+  // Small distances feel PREEM in mobile UI
+  distance: {
+    sm: 6,
+    md: 10,
+    lg: 16,
+  },
+};

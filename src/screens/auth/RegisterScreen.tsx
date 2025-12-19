@@ -5,12 +5,12 @@ import {
   ActivityIndicator,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { signUp } from '../../api/auth';
 import LongRestLogoSvg from '../../components/LongRestLogoSvg';
 import { ScreenContainer } from '../../components/ScreenContainer';
+import { PressableScale } from '../../components/motion/PressableScale';
 import type { AuthStackParamList } from '../../navigation/AuthNavigator';
 import layoutStyles from '../../styles/layout';
 import { colors } from '../../theme';
@@ -92,7 +92,7 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           secureTextEntry
         />
 
-        <TouchableOpacity
+        <PressableScale
           style={layoutStyles.primaryButton}
           onPress={handleRegister}
           disabled={loading}
@@ -103,13 +103,13 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           ) : (
             <Text style={layoutStyles.primaryButtonText}>Sign Up</Text>
           )}
-        </TouchableOpacity>
+        </PressableScale>
 
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <PressableScale onPress={() => navigation.goBack()}>
           <Text style={layoutStyles.linkText}>
             Already have an account? Sign in.
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </ScreenContainer>
   );

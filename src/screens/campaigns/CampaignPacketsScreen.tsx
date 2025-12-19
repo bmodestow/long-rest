@@ -3,19 +3,19 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    View
 } from 'react-native';
 import {
-  getInboxPackets,
-  InboxPacket,
-  markPacketRead,
+    getInboxPackets,
+    InboxPacket,
+    markPacketRead,
 } from '../../api/packets';
+import { PressableScale } from '../../components/motion/PressableScale';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { colors, radii, spacing } from '../../theme';
 
@@ -122,7 +122,7 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
     }
 
     return (
-      <TouchableOpacity
+      <PressableScale
         style={[styles.card, isUnread && styles.cardUnread]}
         onPress={() => handleOpenPacket(item)}
         activeOpacity={0.8}
@@ -164,7 +164,7 @@ const CampaignPacketsScreen: React.FC<CampaignPacketsScreenProps> = ({
         ) : null}
 
         <Text style={styles.expandHint}>Tap to view full packet</Text>
-      </TouchableOpacity>
+      </PressableScale>
     );
   };
 

@@ -6,8 +6,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import {
   CampaignMember,
@@ -17,6 +16,7 @@ import {
   createPacketWithRecipients,
   EventPacketType,
 } from '../../api/packets';
+import { PressableScale } from '../../components/motion/PressableScale';
 import { colors, radii, spacing } from '../../theme';
 
 interface DmSendPacketFormProps {
@@ -175,7 +175,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
         {PACKET_TYPES.map((t) => {
           const isActive = t === packetType;
           return (
-            <TouchableOpacity
+            <PressableScale
               key={t}
               style={[styles.typeChip, isActive && styles.typeChipActive]}
               onPress={() => setPacketType(t)}
@@ -188,7 +188,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
               >
                 {t.toUpperCase()}
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </View>
@@ -215,7 +215,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
       {/* Player selection */}
       <View style={styles.recipientHeaderRow}>
         <Text style={styles.label}>Recipients</Text>
-        <TouchableOpacity
+        <PressableScale
           onPress={toggleSelectAll}
           disabled={playerMembers.length === 0}
         >
@@ -229,7 +229,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
               ? 'Clear all'
               : 'Select all'}
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       {playerMembers.length === 0 ? (
@@ -239,7 +239,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
           {playerMembers.map((player, index) => {
             const selected = selectedPlayerIds.includes(player.id);
             return (
-              <TouchableOpacity
+              <PressableScale
                 key={player.id}
                 style={styles.playerRow}
                 onPress={() => togglePlayerSelection(player.id)}
@@ -254,14 +254,14 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
                 <Text style={styles.playerName}>
                   Player {index + 1} ({player.role})
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             );
           })}
         </View>
       )}
 
       {/* Publish toggle */}
-      <TouchableOpacity
+      <PressableScale
         style={styles.publishToggle}
         onPress={() => setIsPublishing((prev) => !prev)}
       >
@@ -274,10 +274,10 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
         <Text style={styles.publishLabel}>
           {isPublishing ? 'Send now (published)' : 'Save as draft (unpublished)'}
         </Text>
-      </TouchableOpacity>
+      </PressableScale>
 
       {/* Send button */}
-      <TouchableOpacity
+      <PressableScale
         style={[
           styles.sendButton,
           (sending ||
@@ -295,7 +295,7 @@ const DmSendPacketForm: React.FC<DmSendPacketFormProps> = ({ campaignId }) => {
         <Text style={styles.sendButtonText}>
           {sending ? 'Sending...' : 'Send Packet'}
         </Text>
-      </TouchableOpacity>
+      </PressableScale>
     </View>
   );
 };

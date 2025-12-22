@@ -15,6 +15,10 @@ import {
 } from 'react-native';
 import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
+import {
+  fetchSessionResponseSummaries,
+  type SessionResponseSummary,
+} from '../../api/sessionResponseSummary';
 import { createSession, fetchSessions, Session } from '../../api/sessions';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { Toast } from '../../components/Toast';
@@ -51,6 +55,10 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [sessionLocation, setSessionLocation] = useState('');
   const [sessionActionLoading, setSessionActionLoading] = useState(false);
 
+  const [sessionResponseSummaries, setSessionResponseSummaries] = useState<
+    Record<string, SessionResponseSummary>
+  >({});
+
   // Invites + Toast state
   const [invites, setInvites] = useState<CampaignInvite[]>([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
@@ -83,6 +91,11 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       setSessionsLoading(true);
       const data = await fetchSessions(campaignId);
       setSessions(data);
+
+      // Fetch response counts for the sessions just loaded
+      const ids = (data ?? []).map((s) => s.id);
+      const summaries = await fetchSessionResponseSummaries(ids);
+      setSessionResponseSummaries(summaries);
     } catch (err: any) {
       Alert.alert(
         'Error',
@@ -92,6 +105,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       setSessionsLoading(false);
     }
   };
+
 
   const loadInvites = async () => {
     if (!isDm) {
@@ -369,6 +383,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               navigation={navigation}
               campaignId={campaignId}
               memberRole={memberRole}
+              sessionResponseSummaries={sessionResponseSummaries}
             />
           )}
         </Tab.Screen>
@@ -473,6 +488,7 @@ interface SessionsTabProps {
   navigation: Props['navigation'];
   campaignId: string;
   memberRole: string;
+  sessionResponseSummaries: Record<string, { yes: number; no: number }>;
 }
 
 const SessionsTab: React.FC<SessionsTabProps> = ({
@@ -492,6 +508,7 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
   navigation,
   campaignId,
   memberRole,
+  sessionResponseSummaries,
 }) => {
   return (
     <ScrollView style={styles.tabContainer}>
@@ -585,15 +602,11 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
                       color={colors.textMuted}
                       style={{ marginRight: 4 }}
                     />
-                    <Text style={styles.sessionMeta}>
-                      {formatDateTime(s.start_at)}
-                    </Text>
+                    <Text style={styles.sessionMeta}>{formatDateTime(s.start_at)}</Text>
                   </View>
 
                   {s.location ? (
-                    <View
-                      style={{ flexDirection: 'row', alignItems: 'center' }}
-                    >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Feather
                         name="map-pin"
                         size={12}
@@ -603,6 +616,26 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
                       <Text style={styles.sessionMeta}>{s.location}</Text>
                     </View>
                   ) : null}
+
+                  {/* ✅ Response summary */}
+                  {(() => {
+                    const summary = sessionResponseSummaries[s.id];
+                    if (!summary || (summary.yes === 0 && summary.no === 0)) return null;
+
+                    return (
+                      <View style={styles.responseSummaryRow}>
+                        <View style={styles.responseSummaryPill}>
+                          <Feather name="check" size={12} color={colors.textMuted} />
+                          <Text style={styles.responseSummaryText}>{summary.yes}</Text>
+                        </View>
+
+                        <View style={styles.responseSummaryPill}>
+                          <Feather name="x" size={12} color={colors.textMuted} />
+                          <Text style={styles.responseSummaryText}>{summary.no}</Text>
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </View>
               </PressableScale>
             ))}
@@ -957,6 +990,27 @@ const styles = StyleSheet.create({
   },
   inviteList: {
     marginTop: spacing.sm,
+  },
+  responseSummaryRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  responseSummaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardSoft,
+  },
+  responseSummaryText: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Campaign, fetchCampaigns } from '../../api/campaigns';
+import { JoinCampaignModal } from '../../components/JoinCampaignModal';
 import { PressableScale } from '../../components/motion/PressableScale';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
@@ -20,6 +21,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'CampaignList'>;
 const CampaignListScreen: React.FC<Props> = ({ navigation }) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joinVisible, setJoinVisible] = useState(false);
 
   const loadCampaigns = async () => {
     try {
@@ -36,6 +38,47 @@ const CampaignListScreen: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
     loadCampaigns();
   }, []);
+
+  const renderJoinCard = () => (
+    <PressableScale style={styles.joinCard} onPress={() => setJoinVisible(true)}>
+      <View style={styles.joinCardHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Feather
+            name="plus-circle"
+            size={18}
+            color={colors.accent}
+            style={{ marginRight: 8 }}
+          />
+          <Text style={styles.joinCardTitle}>Join Campaign</Text>
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.textMuted} />
+      </View>
+
+      <Text style={styles.joinCardBody}>Enter an invite code to join a party.</Text>
+    </PressableScale>
+  );
+
+  const renderCreateCard = () => (
+    <PressableScale
+      style={styles.joinCard}
+      onPress={() => navigation.navigate('CreateCampaign')}
+    >
+      <View style={styles.joinCardHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Feather
+            name="edit-3"
+            size={18}
+            color={colors.accent}
+            style={{ marginRight: 8 }}
+          />
+          <Text style={styles.joinCardTitle}>Create Campaign</Text>
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.textMuted} />
+      </View>
+
+      <Text style={styles.joinCardBody}>Start a new world, invite your players.</Text>
+    </PressableScale>
+  );
 
   const renderItem = ({ item }: { item: Campaign }) => (
     <PressableScale
@@ -99,25 +142,68 @@ const CampaignListScreen: React.FC<Props> = ({ navigation }) => {
       {campaigns.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>
-            No campaigns yet. Create one to get started.
+            No campaigns yet. Create one to get started—or join one with an invite code.
           </Text>
+
+          <View style={{ height: spacing.lg }} />
+
+          {renderCreateCard()}
+
+          <View style={{ height: spacing.md }} />
+
+          {renderJoinCard()}
         </View>
       ) : (
         <FlatList
           data={campaigns}
           keyExtractor={(c) => c.id}
           renderItem={renderItem}
-          ItemSeparatorComponent={() => (
-            <View style={{ height: spacing.sm }} />
-          )}
+          ListHeaderComponent={
+            <View style={{ paddingBottom: spacing.sm }}>
+              {renderJoinCard()}
+              <View style={{ height: spacing.sm }} />
+            </View>
+          }
+          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
           contentContainerStyle={{ paddingVertical: spacing.sm }}
         />
       )}
+
+      <JoinCampaignModal
+        visible={joinVisible}
+        onClose={() => setJoinVisible(false)}
+        onJoined={async () => {
+          await loadCampaigns();
+        }}
+      />
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
+  joinCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    backgroundColor: colors.cardSoft,
+  },
+  joinCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  joinCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  joinCardBody: {
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+
   card: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -149,6 +235,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: spacing.xl,
   },
   emptyText: {
     color: colors.textMuted,

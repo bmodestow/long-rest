@@ -7,11 +7,12 @@ import {
   ActivityIndicator,
   Alert,
   Button,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from 'react-native';
 import { deleteCampaign, updateCampaign } from '../../api/campaigns';
 import { CampaignInvite, createInvite, fetchInvites } from '../../api/invites';
@@ -19,7 +20,17 @@ import {
   fetchSessionResponseSummaries,
   type SessionResponseSummary,
 } from '../../api/sessionResponseSummary';
-import { createSession, fetchSessions, Session } from '../../api/sessions';
+import {
+  fetchMySessionResponseMap,
+  upsertSessionResponse,
+  type SessionResponseValue,
+} from '../../api/sessionResponses';
+import {
+  createSession,
+  fetchSessions,
+  finalizeSession,
+  type Session,
+} from '../../api/sessions';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import { Toast } from '../../components/Toast';
 import { PressableScale } from '../../components/motion/PressableScale';
@@ -35,6 +46,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'CampaignDetail'>;
 type CampaignTabParamList = {
   Overview: undefined;
   Sessions: undefined;
+  Characters: undefined;
   Packets: undefined;
   Recaps: undefined;
   DmTools: undefined;
@@ -43,7 +55,7 @@ type CampaignTabParamList = {
 const Tab = createMaterialTopTabNavigator<CampaignTabParamList>();
 
 const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
-  const { campaignId, name, memberRole, description } = route.params;
+  const { campaignId, name, memberRole, description, justJoined } = route.params;
 
   // Sessions state
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -57,6 +69,11 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const [sessionResponseSummaries, setSessionResponseSummaries] = useState<
     Record<string, SessionResponseSummary>
+  >({});
+
+  // my responses (for inline button highlighting)
+  const [mySessionResponses, setMySessionResponses] = useState<
+    Record<string, SessionResponseValue | null>
   >({});
 
   // Invites + Toast state
@@ -75,6 +92,28 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const isDm = memberRole === 'dm' || memberRole === 'co_dm';
+  const isPlayer = memberRole === 'player';
+
+  const showToast = (msg: string) => {
+    toastSeq.current += 1;
+    const mySeq = toastSeq.current;
+    setToastMsg(msg);
+    setToastVisible(true);
+
+    setTimeout(() => {
+      if (toastSeq.current === mySeq) setToastVisible(false);
+    }, 1700);
+  };
+
+  // Helpers for proposed/final scheduling
+  const sessionDisplayStart = (s: Session) => s.final_start_at ?? s.start_at;
+  const isProposed = (s: Session) => s.schedule_status === 'proposed';
+
+  useEffect(() => {
+    if (!justJoined) return;
+    showToast('Joined campaign!');
+    navigation.setParams({ justJoined: false });
+  }, [justJoined, navigation]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -82,7 +121,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       headerStyle: { backgroundColor: colors.bgElevated },
       headerTintColor: colors.text,
       headerTitleStyle: { color: colors.text },
-      headerShadowVisible: false, // hides the grey bottom border on iOS
+      headerShadowVisible: false,
     });
   }, [navigation, editingName, name]);
 
@@ -92,20 +131,27 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       const data = await fetchSessions(campaignId);
       setSessions(data);
 
-      // Fetch response counts for the sessions just loaded
       const ids = (data ?? []).map((s) => s.id);
+
+      // counts
       const summaries = await fetchSessionResponseSummaries(ids);
       setSessionResponseSummaries(summaries);
+
+      // my responses (players only)
+      if (isPlayer && ids.length) {
+        try {
+          const mine = await fetchMySessionResponseMap(ids);
+          setMySessionResponses((prev) => ({ ...prev, ...mine }));
+        } catch {
+          // ignore; still works with optimistic updates
+        }
+      }
     } catch (err: any) {
-      Alert.alert(
-        'Error',
-        err?.message ?? 'Failed to load sessions for this campaign.'
-      );
+      Alert.alert('Error', err?.message ?? 'Failed to load sessions for this campaign.');
     } finally {
       setSessionsLoading(false);
     }
   };
-
 
   const loadInvites = async () => {
     if (!isDm) {
@@ -118,10 +164,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       const data = await fetchInvites(campaignId);
       setInvites(data);
     } catch (err: any) {
-      Alert.alert(
-        'Error',
-        err?.message ?? 'Failed to load invite codes for this campaign.'
-      );
+      Alert.alert('Error', err?.message ?? 'Failed to load invite codes for this campaign.');
     } finally {
       setInvitesLoading(false);
     }
@@ -130,6 +173,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   useEffect(() => {
     loadSessions();
     loadInvites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId]);
 
   const roleLabel =
@@ -146,8 +190,6 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     }
 
     const raw = sessionDateTime.trim();
-
-    // Expect format: YYYY-MM-DD HH:MM (24h)
     const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})$/);
 
     if (!match) {
@@ -173,7 +215,6 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       return;
     }
 
-    // Create a UTC date so it's unambiguous for Postgres
     const parsed = new Date(Date.UTC(year, month - 1, day, hour, minute));
     const iso = parsed.toISOString();
 
@@ -206,16 +247,10 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     setInviteActionLoading(true);
     try {
       const invite = await createInvite(campaignId);
-      Alert.alert(
-        'Invite created!',
-        `Share this code with your players:\n\n${invite.code}`
-      );
+      Alert.alert('Invite created!', `Share this code with your players:\n\n${invite.code}`);
       await loadInvites();
     } catch (err: any) {
-      Alert.alert(
-        'Error creating invite',
-        err?.message ?? 'Something went wrong while creating the invite.'
-      );
+      Alert.alert('Error creating invite', err?.message ?? 'Something went wrong while creating the invite.');
     } finally {
       setInviteActionLoading(false);
     }
@@ -223,9 +258,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const renderInviteStatus = (invite: CampaignInvite) => {
     if (invite.used_by_user_id) {
-      return `Used at ${
-        invite.used_at ? formatDateTime(invite.used_at) : ''
-      }`.trim();
+      return `Used at ${invite.used_at ? formatDateTime(invite.used_at) : ''}`.trim();
     }
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
       return 'Expired';
@@ -248,10 +281,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
       Alert.alert('Saved', 'Campaign settings updated.');
     } catch (err: any) {
-      Alert.alert(
-        'Error',
-        err?.message ?? 'Failed to update campaign settings.'
-      );
+      Alert.alert('Error', err?.message ?? 'Failed to update campaign settings.');
     } finally {
       setSettingsLoading(false);
     }
@@ -273,10 +303,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               Alert.alert('Deleted', 'Campaign has been deleted.');
               navigation.goBack();
             } catch (err: any) {
-              Alert.alert(
-                'Error',
-                err?.message ?? 'Failed to delete campaign.'
-              );
+              Alert.alert('Error', err?.message ?? 'Failed to delete campaign.');
             } finally {
               setDeleteLoading(false);
             }
@@ -284,17 +311,6 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         },
       ]
     );
-  };
-
-  const showToast = (msg: string) => {
-    toastSeq.current += 1;
-    const mySeq = toastSeq.current;
-    setToastMsg(msg);
-    setToastVisible(true);
-
-    setTimeout(() => {
-      if (toastSeq.current === mySeq) setToastVisible(false);
-    }, 1700);
   };
 
   const handleCopyInviteCode = async (code: string) => {
@@ -306,10 +322,41 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
     }
   };
 
+  const handleInlineRespond = async (sessionId: string, value: SessionResponseValue) => {
+    if (!isPlayer) return;
+
+    // optimistic highlight
+    setMySessionResponses((prev) => ({ ...prev, [sessionId]: value }));
+
+    try {
+      await upsertSessionResponse(sessionId, value);
+
+      // refresh summary for this session
+      const updated = await fetchSessionResponseSummaries([sessionId]);
+      setSessionResponseSummaries((prev) => ({
+        ...prev,
+        [sessionId]: updated[sessionId],
+      }));
+
+      showToast('Response saved');
+    } catch (err: any) {
+      showToast(err?.message ?? 'Failed to submit response');
+    }
+  };
+
+  const handleFinalizeSession = async (sessionId: string) => {
+    if (!isDm) return;
+    try {
+      await finalizeSession(sessionId);
+      showToast('Session finalized');
+      await loadSessions();
+    } catch (err: any) {
+      showToast(err?.message ?? 'Failed to finalize session');
+    }
+  };
 
   return (
     <ScreenContainer style={{ paddingHorizontal: 0, paddingVertical: 0 }}>
-      {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.title}>{editingName || name}</Text>
         <Text style={styles.subtitle}>{roleLabel}</Text>
@@ -334,13 +381,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               case 'Sessions':
                 return <Feather name="calendar" size={16} color={color} />;
               case 'Characters':
-                return (
-                  <MaterialCommunityIcons
-                    name="account-group"
-                    size={16}
-                    color={color}
-                  />
-                );
+                return <MaterialCommunityIcons name="account-group" size={16} color={color} />;
               case 'Packets':
                 return <Feather name="mail" size={16} color={color} />;
               case 'Recaps':
@@ -356,11 +397,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       >
         <Tab.Screen name="Overview">
           {() => (
-            <OverviewTab
-              description={
-                (editingDescription || description || '').trim() || undefined
-              }
-            />
+            <OverviewTab description={(editingDescription || description || '').trim() || undefined} />
           )}
         </Tab.Screen>
 
@@ -368,6 +405,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           {() => (
             <SessionsTab
               isDm={isDm}
+              isPlayer={isPlayer}
               sessions={sessions}
               sessionsLoading={sessionsLoading}
               showCreateSession={showCreateSession}
@@ -384,6 +422,11 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
               campaignId={campaignId}
               memberRole={memberRole}
               sessionResponseSummaries={sessionResponseSummaries}
+              mySessionResponses={mySessionResponses}
+              onInlineRespond={handleInlineRespond}
+              onFinalizeSession={handleFinalizeSession}
+              sessionDisplayStart={sessionDisplayStart}
+              isProposed={isProposed}
             />
           )}
         </Tab.Screen>
@@ -391,10 +434,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
         <Tab.Screen name="Characters">
           {() => (
             <View style={styles.tabContainer}>
-              <CampaignCharactersScreen
-                campaignId={campaignId}
-                role={memberRole}
-              />
+              <CampaignCharactersScreen campaignId={campaignId} role={memberRole} />
             </View>
           )}
         </Tab.Screen>
@@ -411,9 +451,7 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
           )}
         </Tab.Screen>
 
-        <Tab.Screen name="Recaps">
-          {() => <RecapsTab />}
-        </Tab.Screen>
+        <Tab.Screen name="Recaps">{() => <RecapsTab />}</Tab.Screen>
 
         <Tab.Screen name="DmTools" options={{ title: 'DM Tools' }}>
           {() => (
@@ -444,9 +482,11 @@ const CampaignDetailScreen: React.FC<Props> = ({ route, navigation }) => {
       <Toast
         message={toastMsg}
         visible={toastVisible}
-        onHide={() => setToastVisible(false)}
+        onHide={() => {
+          setToastVisible(false);
+          setToastMsg(null);
+        }}
       />
-
     </ScreenContainer>
   );
 };
@@ -473,6 +513,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ description }) => {
 
 interface SessionsTabProps {
   isDm: boolean;
+  isPlayer: boolean;
   sessions: Session[];
   sessionsLoading: boolean;
   showCreateSession: boolean;
@@ -489,10 +530,16 @@ interface SessionsTabProps {
   campaignId: string;
   memberRole: string;
   sessionResponseSummaries: Record<string, { yes: number; no: number }>;
+  mySessionResponses: Record<string, SessionResponseValue | null>;
+  onInlineRespond: (sessionId: string, value: SessionResponseValue) => void;
+  onFinalizeSession: (sessionId: string) => void;
+  sessionDisplayStart: (s: Session) => string;
+  isProposed: (s: Session) => boolean;
 }
 
 const SessionsTab: React.FC<SessionsTabProps> = ({
   isDm,
+  isPlayer,
   sessions,
   sessionsLoading,
   showCreateSession,
@@ -509,6 +556,11 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
   campaignId,
   memberRole,
   sessionResponseSummaries,
+  mySessionResponses,
+  onInlineRespond,
+  onFinalizeSession,
+  sessionDisplayStart,
+  isProposed,
 }) => {
   return (
     <ScrollView style={styles.tabContainer}>
@@ -568,61 +620,69 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
           </Text>
         ) : (
           <View style={styles.sessionList}>
-            {sessions.map((s) => (
-              <PressableScale
-                key={s.id}
-                onPress={() =>
-                  navigation.navigate('SessionDetail', {
-                    sessionId: s.id,
-                    campaignId,
-                    title: s.title,
-                    scheduledStart: s.start_at,
-                    location: s.location,
-                    memberRole,
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <View style={styles.sessionCard}>
-                  <View style={styles.sessionHeader}>
-                    <Text style={styles.sessionTitle}>{s.title}</Text>
-                    <Text style={styles.sessionStatus}>{s.status}</Text>
-                  </View>
+            {sessions.map((s) => {
+              const summary = sessionResponseSummaries[s.id];
+              const my = mySessionResponses[s.id];
+              const proposed = isProposed(s);
+              const displayStart = sessionDisplayStart(s);
 
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginBottom: 2,
-                    }}
+              return (
+                <View key={s.id} style={styles.sessionCard}>
+                  <PressableScale
+                    onPress={() =>
+                      navigation.navigate('SessionDetail', {
+                        sessionId: s.id,
+                        campaignId,
+                        title: s.title,
+                        scheduledStart: displayStart,
+                        location: s.location,
+                        memberRole,
+                      })
+                    }
+                    activeOpacity={0.7}
                   >
-                    <Feather
-                      name="calendar"
-                      size={12}
-                      color={colors.textMuted}
-                      style={{ marginRight: 4 }}
-                    />
-                    <Text style={styles.sessionMeta}>{formatDateTime(s.start_at)}</Text>
-                  </View>
+                    <View style={styles.sessionHeader}>
+                      <Text style={styles.sessionTitle}>{s.title}</Text>
 
-                  {s.location ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                        <View
+                          style={[
+                            styles.schedulePill,
+                            proposed ? styles.schedulePillProposed : styles.schedulePillFinal,
+                          ]}
+                        >
+                          <Text style={styles.schedulePillText}>
+                            {proposed ? 'PROPOSED' : 'FINAL'}
+                          </Text>
+                        </View>
+
+                        <Text style={styles.sessionStatus}>{s.status}</Text>
+                      </View>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                       <Feather
-                        name="map-pin"
+                        name="calendar"
                         size={12}
                         color={colors.textMuted}
                         style={{ marginRight: 4 }}
                       />
-                      <Text style={styles.sessionMeta}>{s.location}</Text>
+                      <Text style={styles.sessionMeta}>{formatDateTime(displayStart)}</Text>
                     </View>
-                  ) : null}
 
-                  {/* ✅ Response summary */}
-                  {(() => {
-                    const summary = sessionResponseSummaries[s.id];
-                    if (!summary || (summary.yes === 0 && summary.no === 0)) return null;
+                    {s.location ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Feather
+                          name="map-pin"
+                          size={12}
+                          color={colors.textMuted}
+                          style={{ marginRight: 4 }}
+                        />
+                        <Text style={styles.sessionMeta}>{s.location}</Text>
+                      </View>
+                    ) : null}
 
-                    return (
+                    {summary && (summary.yes !== 0 || summary.no !== 0) ? (
                       <View style={styles.responseSummaryRow}>
                         <View style={styles.responseSummaryPill}>
                           <Feather name="check" size={12} color={colors.textMuted} />
@@ -634,11 +694,46 @@ const SessionsTab: React.FC<SessionsTabProps> = ({
                           <Text style={styles.responseSummaryText}>{summary.no}</Text>
                         </View>
                       </View>
-                    );
-                  })()}
+                    ) : null}
+                  </PressableScale>
+
+                  {isDm && proposed && (
+                    <View style={styles.dmRow}>
+                      <Pressable onPress={() => onFinalizeSession(s.id)} style={styles.finalizeBtn}>
+                        <Feather name="check-circle" size={14} color={colors.bg} />
+                        <Text style={styles.finalizeBtnText}>Finalize</Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {isPlayer && proposed && (
+                    <View style={styles.inlineResponseRow}>
+                      <Pressable
+                        onPress={() => onInlineRespond(s.id, 'yes')}
+                        style={[
+                          styles.inlineResponseBtn,
+                          my === 'yes' && styles.inlineResponseBtnYesActive,
+                        ]}
+                      >
+                        <Feather name="check" size={14} color={colors.text} />
+                        <Text style={styles.inlineResponseText}>Yes</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => onInlineRespond(s.id, 'no')}
+                        style={[
+                          styles.inlineResponseBtn,
+                          my === 'no' && styles.inlineResponseBtnNoActive,
+                        ]}
+                      >
+                        <Feather name="x" size={14} color={colors.text} />
+                        <Text style={styles.inlineResponseText}>No</Text>
+                      </Pressable>
+                    </View>
+                  )}
                 </View>
-              </PressableScale>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
@@ -652,8 +747,8 @@ const RecapsTab: React.FC = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recaps</Text>
         <Text style={styles.sectionBody}>
-          Session recaps written by the DM will live here so players can catch
-          up between Long Rests.
+          Session recaps written by the DM will live here so players can catch up between Long
+          Rests.
         </Text>
       </View>
     </ScrollView>
@@ -699,31 +794,18 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
 }) => {
   return (
     <ScrollView style={styles.tabContainer}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          marginBottom: 8,
-        }}
-      >
-        <Feather
-          name="tool"
-          size={16}
-          color={colors.text}
-          style={{ marginRight: 6 }}
-        />
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Feather name="tool" size={16} color={colors.text} style={{ marginRight: 6 }} />
         <Text style={styles.settingsTitle}>DM Tools</Text>
       </View>
 
       {isDm ? (
         <>
-          {/* Send Packet */}
           <View style={styles.sendPacketSection}>
             <Text style={styles.settingsTitle}>Send Packet to Players</Text>
             <DmSendPacketForm campaignId={campaignId} />
           </View>
 
-          {/* Campaign Settings */}
           <View style={styles.settingsContainer}>
             <Text style={styles.settingsTitle}>Campaign Settings</Text>
 
@@ -761,19 +843,15 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
             </View>
           </View>
 
-          {/* Invite Codes */}
           <View style={styles.inviteSection}>
             <Text style={styles.settingsTitle}>Invite Codes</Text>
             <Text style={styles.sectionBody}>
-              Generate invite codes and share them with your players so they can
-              join this campaign.
+              Generate invite codes and share them with your players so they can join this campaign.
             </Text>
 
             <View style={{ marginVertical: 8 }}>
               <Button
-                title={
-                  inviteActionLoading ? 'Creating code...' : 'Generate Invite Code'
-                }
+                title={inviteActionLoading ? 'Creating code...' : 'Generate Invite Code'}
                 onPress={handleCreateInvite}
                 disabled={inviteActionLoading}
               />
@@ -784,9 +862,7 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
                 <ActivityIndicator />
               </View>
             ) : invites.length === 0 ? (
-              <Text style={styles.sectionBody}>
-                No invite codes yet. Generate one above.
-              </Text>
+              <Text style={styles.sectionBody}>No invite codes yet. Generate one above.</Text>
             ) : (
               <View style={styles.inviteList}>
                 {invites.map((inv) => (
@@ -828,8 +904,7 @@ const DmToolsTab: React.FC<DmToolsTabProps> = ({
         </>
       ) : (
         <Text style={styles.sectionBody}>
-          DM-only tools will appear here. Ask your DM for an invite code to join
-          campaigns.
+          DM-only tools will appear here. Ask your DM for an invite code to join campaigns.
         </Text>
       )}
     </ScrollView>
@@ -936,6 +1011,82 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
   },
+
+  // Proposed/Final pill
+  schedulePill: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  schedulePillProposed: {
+    borderColor: colors.accent,
+    backgroundColor: 'rgba(228, 155, 60, 0.12)',
+  },
+  schedulePillFinal: {
+    borderColor: colors.border,
+    backgroundColor: colors.cardSoft,
+  },
+  schedulePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: colors.text,
+  },
+
+  // DM finalize
+  dmRow: {
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  finalizeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.accent,
+    borderWidth: 1,
+    borderColor: colors.accent,
+  },
+  finalizeBtnText: {
+    color: colors.bg,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  inlineResponseRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  inlineResponseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.cardSoft,
+  },
+  inlineResponseText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  inlineResponseBtnYesActive: {
+    borderColor: '#22c55e',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+  },
+  inlineResponseBtnNoActive: {
+    borderColor: '#ef4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+  },
+
   settingsContainer: {
     marginBottom: spacing.lg,
   },

@@ -210,7 +210,7 @@ const SessionDetailScreen: React.FC<Props> = ({ route }) => {
   const sortedResponses = useMemo(() => {
     const copy = [...responses];
     copy.sort((a, b) => {
-      if (a.response === b.response) return a.updated_at < b.updated_at ? 1 : -1;
+      if (a.response === b.response) return a.created_at < b.created_at ? 1 : -1;
       return a.response === 'yes' ? -1 : 1;
     });
     return copy;
@@ -415,7 +415,10 @@ const SessionDetailScreen: React.FC<Props> = ({ route }) => {
       <Toast
         message={toastMsg}
         visible={toastVisible}
-        onHide={() => setToastVisible(false)}
+        onHide={() => {
+          setToastVisible(false);
+          setToastMsg(null);
+        }}
       />
     </ScreenContainer>
   );

@@ -13,6 +13,7 @@ export type AppStackParamList = {
         name: string;
         description: string | null;
         memberRole: 'dm' | 'co_dm' | 'player';
+        justJoined?: boolean;
     };
     SessionDetail: {
         sessionId: string;

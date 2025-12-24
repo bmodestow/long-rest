@@ -56,7 +56,7 @@ export const Toast: React.FC<Props> = ({
         return () => clearTimeout(t);
     }, [visible, message, durationMs, onHide, opacity, translateY]);
 
-    if (!message) return null;
+    if (!message || !message) return null;
 
     return (
         <Animated.View

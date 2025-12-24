@@ -15,6 +15,7 @@ import { PressableScale } from '../../components/motion/PressableScale';
 import { ScreenContainer } from '../../components/ScreenContainer';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { colors, radii, spacing } from '../../theme';
+import { Toast } from '../../components/Toast';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'CampaignList'>;
 
@@ -22,6 +23,15 @@ const CampaignListScreen: React.FC<Props> = ({ navigation }) => {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [joinVisible, setJoinVisible] = useState(false);
+
+  // Toast
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setToastVisible(true);
+  }
 
   const loadCampaigns = async () => {
     try {
@@ -172,9 +182,34 @@ const CampaignListScreen: React.FC<Props> = ({ navigation }) => {
       <JoinCampaignModal
         visible={joinVisible}
         onClose={() => setJoinVisible(false)}
-        onJoined={async () => {
-          await loadCampaigns();
+        onJoined={async (campaignId) => {
+          // GET TOASTY
+          showToast('Joined campaign!');
+          // Fetch fresh list
+          const data = await fetchCampaigns();
+          setCampaigns(data);
+
+          // Find the camapaign we just joined
+          const joined = data.find((c) => c.id === campaignId);
+
+          if (!joined) {
+            return;
+          }
+
+          navigation.navigate('CampaignDetail', {
+            campaignId: joined.id,
+            name: joined.name,
+            description: joined.description,
+            memberRole: joined.member_role,
+            justJoined: true,
+          });
         }}
+      />
+
+      <Toast
+        message={toastMessage}
+        visible={toastVisible}
+        onHide={() => setToastVisible(false)}
       />
     </ScreenContainer>
   );
